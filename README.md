@@ -8,7 +8,7 @@ The same skill works in **Claude** (Claude Code, claude.ai) and **Codex** (CLI, 
 > Unofficial project, not affiliated with OpenAI. The screen layouts and motion of the DevDay 2026 keynote were analyzed frame by frame
 > and rebuilt from scratch. No OpenAI logos, fonts, images or video frames are included. Every brand in the demo (Orbit, Pulse, Relay, …) is fictional.
 
-**Live demo:** https://lastdance.kr/OPENAI-DevDay-Presentation-Template/
+**Live demo:** https://jiminlee-way.github.io/OPENAI-DevDay-Presentation-Template/
 (or download [`docs/index.html`](docs/index.html) and open it in a browser). → / click: next · ←: back · F: fullscreen · O: overview.
 
 ## Install

@@ -8,7 +8,7 @@
 > 비공식 프로젝트입니다. OpenAI와 관계가 없으며, DevDay 2026 키노트 영상의 화면 구성과 모션을 프레임 단위로 분석해 처음부터
 > 다시 구현했습니다. OpenAI의 로고, 폰트, 이미지, 영상 프레임은 포함하지 않습니다. 데모 속 브랜드(Orbit, Pulse, Relay 등)는 전부 가상입니다.
 
-**데모:** https://lastdance.kr/OPENAI-DevDay-Presentation-Template/
+**데모:** https://jiminlee-way.github.io/OPENAI-DevDay-Presentation-Template/
 (또는 [`docs/index.html`](docs/index.html)을 내려받아 브라우저로 여세요). →/클릭 다음, ← 이전, F 전체화면, O 전체 보기.
 
 ## 설치
