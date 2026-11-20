@@ -1,0 +1,17 @@
+{
+  "name": "stagedeck",
+  "owner": {
+    "name": "JiminLee-way"
+  },
+  "metadata": {
+    "description": "StageDeck: keynote-style HTML presentation skill with spring motion (unofficial, DevDay-style).",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "stagedeck",
+      "source": "./plugins/stagedeck",
+      "description": "Build DevDay-style keynote decks as one HTML file: dark LED-wall look, spring motion, dot-matrix names, bento stats, live charts. For presentations, slides, 발표자료, PPT."
+    }
+  ]
+}

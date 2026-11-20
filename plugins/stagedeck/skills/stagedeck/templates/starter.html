@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="../assets/stagedeck.css">
+</head>
+<body>
+<!--
+  StageDeck starter. One <section class="slide"> per slide. Canvas is 1920×1080.
+  Copy more archetypes from examples/showcase.html. Keys: → next · ← back · F fullscreen · O overview.
+-->
+<div class="deck">
+
+  <!-- Cold open: a character face zooms out to a small dot -->
+  <section class="slide l-center" data-bg="black" data-transition="cut">
+    <div class="sd-dot" data-color="green" data-face="o o" data-anim="zoomout"></div>
+    <aside class="notes">Silence for a beat, then walk on.</aside>
+  </section>
+
+  <!-- Speaker hand-off: dot-matrix name -->
+  <section class="slide l-center">
+    <h1 class="sd-name" data-anim="dots">발표자 이름</h1>
+  </section>
+
+  <!-- Section title: types in, second line in gradient -->
+  <section class="slide l-center">
+    <h2 class="t-display" data-anim="typein"><span>첫 번째 이야기,</span><span class="grad">핵심 메시지</span></h2>
+  </section>
+
+  <!-- Title alone, then chips push it up (click once) -->
+  <section class="slide l-center">
+    <h2 class="t-title" data-anim="glow" data-flip>무엇을 할 수 있나</h2>
+    <div class="row wrap center gap-l mt-l" data-step="1" data-collapse data-anim-children="rise" data-stagger="140" style="max-width:1300px;row-gap:40px">
+      <span class="sd-chip" data-color="orange"><i>1</i>기능 하나</span>
+      <span class="sd-chip" data-color="green"><i>2</i>기능 둘</span>
+      <span class="sd-chip" data-color="cyan"><i>3</i>기능 셋</span>
+    </div>
+  </section>
+
+  <!-- Title + product shot -->
+  <section class="slide">
+    <div class="l-split grow">
+      <div class="stack gap-s">
+        <h2 class="t-h2" data-anim="rise">제품 이름</h2>
+        <span class="sd-status" style="--c:var(--sd-blue)" data-anim="rise" data-delay="120">오늘부터 사용 가능</span>
+      </div>
+      <div class="sd-shot is-light" data-anim="blur" data-delay="150" style="height:640px">
+        <div class="sd-placeholder" style="height:100%">스크린샷을 여기에 (img)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hard numbers -->
+  <section class="slide" style="justify-content:center">
+    <div class="l-split" style="grid-template-columns:.8fr 1.2fr">
+      <h2 class="t-title" data-anim="mask"><span>숫자로 보는</span><span class="hl">성과</span></h2>
+      <div class="row gap-xl" data-anim-children="rise" data-stagger="120" data-delay="200">
+        <div class="sd-stat" data-color="green"><span class="sd-stat__num" data-anim="count">30%+</span><span class="sd-stat__label">설명 한 줄</span></div>
+        <div class="sd-stat" data-color="violet"><span class="sd-stat__num" data-anim="count">2.5M</span><span class="sd-stat__label">설명 한 줄</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quote with a highlighted phrase -->
+  <section class="slide l-center">
+    <p class="t-caption" data-anim="rise">출처 또는 날짜</p>
+    <blockquote class="sd-quote mt-m w-80" data-anim="words">“가장 중요한 <span class="hl">한 문장</span>을 여기에.”</blockquote>
+  </section>
+
+  <!-- Closing -->
+  <section class="slide l-center" data-bg="stars">
+    <h2 class="t-display" data-anim="zoom">감사합니다</h2>
+    <div class="sd-dots-row mt-l" data-anim-children="pop" data-stagger="60" data-delay="300">
+      <span class="sd-dot" data-color="blue" data-face="^ ^" style="--size:72px"></span>
+      <span class="sd-dot" data-color="green" data-face="o o" style="--size:72px"></span>
+      <span class="sd-dot" data-color="orange" data-face="&gt; &lt;" style="--size:72px"></span>
+      <span class="sd-dot" data-color="violet" data-face="* *" style="--size:72px"></span>
+    </div>
+  </section>
+
+</div>
+<script src="../assets/stagedeck.js"></script>
+</body>
+</html>

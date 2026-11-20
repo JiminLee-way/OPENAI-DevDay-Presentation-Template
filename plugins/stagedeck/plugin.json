@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "stagedeck",
+  "version": "1.0.0",
+  "description": "Build DevDay-style keynote decks as one HTML file: dark LED-wall look, spring motion, dot-matrix names, bento stats, live charts. For presentations, slides, 발표자료, PPT."
+}

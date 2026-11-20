@@ -1,0 +1,9 @@
+interface:
+  display_name: "StageDeck"
+  short_description: "Keynote-style HTML decks with spring motion"
+  icon_small: "./assets/icon.svg"
+  icon_large: "./assets/icon.svg"
+  brand_color: "#9D76FF"
+  default_prompt: "Use $stagedeck to build a keynote-style presentation about "
+policy:
+  allow_implicit_invocation: true

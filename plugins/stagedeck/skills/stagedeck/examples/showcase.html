@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StageDeck Showcase</title>
+<link rel="stylesheet" href="../assets/stagedeck.css">
+</head>
+<body>
+<div class="deck">
+
+  <!-- 1. INTRO — giant dot face zooms out to a small character -->
+  <section class="slide l-center" data-bg="black" data-transition="cut">
+    <div class="sd-dot" data-color="green" data-face="o o" data-anim="zoomout" style="--size:120px"></div>
+  </section>
+
+  <!-- 2. SPEAKER — dot-matrix name resolve -->
+  <section class="slide l-center">
+    <h1 class="sd-name" data-anim="dots">Jiwoo Han</h1>
+  </section>
+
+  <!-- 3. STATS BENTO — whole grid fades in fast, tiles keep living -->
+  <section class="slide" style="padding:90px 110px">
+    <div class="sd-bento" style="grid-template-rows:repeat(3,1fr)" data-anim-children="blur" data-stagger="24">
+      <div class="sd-tile c-4 is-clear" style="justify-content:center">
+        <div class="sd-stat is-inline" data-color="cyan"><span class="sd-stat__num" data-anim="count">8억</span><span class="sd-stat__label">주간 사용자</span></div>
+      </div>
+      <div class="sd-tile c-2" style="background:#2c8a4e"><span class="sd-tile__label" style="color:#fff">Studio</span></div>
+      <div class="sd-tile c-3 is-clear" style="justify-content:center">
+        <div class="sd-stat is-inline" data-color="orange"><span class="sd-stat__num" data-anim="count">40+</span><span class="sd-stat__label">모델 출시</span></div>
+      </div>
+      <div class="sd-tile c-3 r-2" style="background:#0f1013"><canvas class="sd-spiral"></canvas><span class="sd-tile__label" style="color:#fff">Pulse 6 · Nova</span></div>
+      <div class="sd-tile c-2 sd-placeholder">이미지</div>
+      <div class="sd-tile c-2 is-center"><span class="sd-dot" data-color="violet" data-face="^ ^" style="--size:90px"></span></div>
+      <div class="sd-tile c-2 is-light"><span class="t-caption" style="color:#555">Pulse 6 · Nova High</span><div class="sd-typing" style="font-size:22px;margin-top:8px;color:#111">Ask anything</div></div>
+      <div class="sd-tile c-3 sd-placeholder">영상</div>
+      <div class="sd-tile c-3 is-light"><span class="t-caption" style="color:#555">주간 리포트</span><b style="font-size:30px;color:#111">팀 업데이트 정리</b></div>
+      <div class="sd-tile c-5 is-clear" style="justify-content:center">
+        <div class="sd-stat is-inline" data-color="violet"><span class="sd-stat__num" data-anim="count">2.5M</span><span class="sd-stat__label">비즈니스 사용자</span></div>
+      </div>
+      <div class="sd-tile c-4 is-center" style="background:#0f1013"><div class="sd-orb" style="width:34%"></div></div>
+    </div>
+  </section>
+
+  <!-- 4. QUOTE CLOUD — depth-of-field cards, sets change with →  -->
+  <section class="slide" data-bg="stars">
+    <div class="sd-cloud">
+      <div data-set="1">
+        <span class="sd-pill sd-cloud__label">리눅스 앱 출시</span>
+        <div class="sd-qcard" data-z="0" style="left:700px;top:150px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#ffb86b">S</div><div><div class="sd-qcard__name">silverline</div><div class="sd-qcard__handle">@silver_line</div></div></div><div class="sd-qcard__text">리눅스 앱 제발 만들어 주세요!!!</div></div>
+        <div class="sd-qcard" data-z="0" style="left:180px;top:380px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#8fd3ff">E</div><div><div class="sd-qcard__name">eustache</div><div class="sd-qcard__handle">@eustache</div></div></div><div class="sd-qcard__text">맥을 살까 고민 중이었는데, 사실 리눅스가 더 좋아요. 리눅스 버전만 나오면 바로 갈아탈게요.</div></div>
+        <div class="sd-qcard" data-z="0" style="left:1060px;top:420px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#b9a4ff">C</div><div><div class="sd-qcard__name">codemeow</div><div class="sd-qcard__handle">@codemeow</div></div></div><div class="sd-qcard__text">아직도 리눅스 앱 기다리는 중.</div></div>
+        <div class="sd-qcard" data-z="2" style="left:1300px;top:120px"><div class="sd-qcard__text">여러 폴더를 한 번에 열 수 있으면 좋겠어요.</div></div>
+        <div class="sd-qcard" data-z="1" style="left:620px;top:700px"><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#7ee2a8">J</div><div><div class="sd-qcard__name">Joel H.</div><div class="sd-qcard__handle">@joelh</div></div></div><div class="sd-qcard__text">리눅스용 앱, 부탁드립니다!</div></div>
+        <div class="sd-qcard" data-z="3" style="left:80px;top:90px"><div class="sd-qcard__text">모바일에서도 원격으로 쓸 수 있나요?</div></div>
+      </div>
+      <div data-set="2">
+        <span class="sd-pill sd-cloud__label">여러 폴더 지원</span>
+        <div class="sd-qcard" data-z="0" style="left:1080px;top:170px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#ffd341">S</div><div><div class="sd-qcard__name">sunny</div><div class="sd-qcard__handle">@sunny.dev</div></div></div><div class="sd-qcard__text">한 프로젝트에 폴더를 여러 개 붙일 수 있게 해 주세요. 지금은 하나만 돼서 불편해요.</div></div>
+        <div class="sd-qcard" data-z="0" style="left:220px;top:330px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#ff8a8a">D</div><div><div class="sd-qcard__name">daybreak</div><div class="sd-qcard__handle">@daybreak</div></div></div><div class="sd-qcard__text">현재 프로젝트는 폴더 하나만 담을 수 있어요. 멀티 폴더 지원이 필요합니다.</div></div>
+        <div class="sd-qcard" data-z="0" style="left:760px;top:610px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#8fd3ff">O</div><div><div class="sd-qcard__name">Obinna O.</div><div class="sd-qcard__handle">@obinna</div></div></div><div class="sd-qcard__text">작업 공간 밖의 파일도 컨텍스트로 넣고 싶어요.</div></div>
+        <div class="sd-qcard" data-z="2" style="left:120px;top:720px"><div class="sd-qcard__text">설정을 팀이랑 공유하고 싶어요.</div></div>
+        <div class="sd-qcard" data-z="3" style="left:1380px;top:640px"><div class="sd-qcard__text">세션 이어서 하기 기능 최고.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. SECTION TITLE — two lines, second in gradient -->
+  <section class="slide l-center">
+    <h2 class="t-display" data-anim="typein"><span>사람과 AI,</span><span class="grad">함께 일하는 방식</span></h2>
+  </section>
+
+  <!-- 6. DOT PARADE — giant characters roll across with motion smear, three land on the edges -->
+  <section class="slide" style="justify-content:center">
+    <h2 class="t-display" data-anim="mask" data-delay="1500" style="position:relative;z-index:3"><span>모두를 위해</span><span class="hl">만듭니다</span></h2>
+    <div class="sd-dot" data-color="green" data-face="+ +" data-anim="roll" data-from-x="-1700" data-from-y="420" data-to-x="2200" data-to-y="-300" data-duration="620" style="--size:480px;position:absolute;left:700px;top:300px"></div>
+    <div class="sd-dot" data-color="orange" data-face="* *" data-anim="roll" data-from-x="-1500" data-from-y="500" data-to-x="2400" data-to-y="100" data-duration="560" data-delay="220" style="--size:420px;position:absolute;left:700px;top:500px"></div>
+    <div class="sd-dot" data-color="violet" data-face="o &lt;" data-anim="roll" data-from-x="-2100" data-from-y="-150" data-delay="420" style="--size:600px;position:absolute;left:1380px;top:-190px"></div>
+    <div class="sd-dot" data-face="^ ^" data-anim="roll" data-from-x="-1900" data-from-y="250" data-delay="640" style="--size:440px;--c:#2b2c30;color:#f3f3f1;position:absolute;left:1020px;top:700px"></div>
+    <div class="sd-dot" data-color="white" data-face="n n" data-anim="roll" data-from-x="-2300" data-from-y="120" data-delay="820" style="--size:540px;position:absolute;left:1540px;top:610px"></div>
+  </section>
+
+  <!-- 7. PARTICLE LOGO — multicolor particles swirl in and assemble the mark -->
+  <section class="slide l-center" data-bg="stars">
+    <div data-anim="assemble" style="width:420px;height:420px">
+      <svg viewBox="0 0 200 200" width="420" height="420" fill="none" stroke="#f3f3f1" stroke-width="16">
+        <circle cx="100" cy="100" r="62"/><circle cx="100" cy="100" r="24" fill="#f3f3f1" stroke="none"/><circle cx="158" cy="42" r="16" fill="#f3f3f1" stroke="none"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 8. CHECKLIST CAROUSEL — items grow the card; → swaps to the next card -->
+  <section class="slide l-center" data-bg="stars">
+    <div class="sd-carousel" style="--gap:56px">
+      <div class="sd-card" style="width:640px" data-anim="blur">
+        <ul class="sd-checklist" data-anim-children="grow" data-stagger="380" data-delay="500">
+          <li>레스토랑 예약하기</li><li>저녁 장보기</li><li>캘린더 확인</li><li>병원 예약 잡기</li><li>이메일 찾기</li>
+        </ul>
+      </div>
+      <div class="sd-card" style="width:640px">
+        <ul class="sd-checklist">
+          <li data-done="1">신제품 QA</li><li data-done="1">웹사이트 디자인</li><li data-done="1">팀 워크숍 기획</li><li>포트폴리오 리밸런싱</li><li>이메일 캠페인 만들기</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. WORDMARK with sheen + character row -->
+  <section class="slide l-center" data-bg="top">
+    <div class="t-hero sheen" data-anim="zoom">Orbit</div>
+    <div class="sd-dots-row mt-l" data-anim-children="pop" data-stagger="70" data-delay="350">
+      <span class="sd-dot" data-color="cyan" data-face="^ ^"></span>
+      <span class="sd-dot" data-color="green" data-face="o o"></span>
+      <span class="sd-dot" data-color="yellow" data-face="- -"></span>
+      <span class="sd-dot" data-color="orange" data-face="&gt; &lt;"></span>
+      <span class="sd-dot" data-color="violet" data-face="* *"></span>
+    </div>
+  </section>
+
+  <!-- 10. TITLE → CHIPS (FLIP): title starts centered, moves up as chips arrive -->
+  <section class="slide l-center">
+    <h2 class="t-title" data-anim="glow" data-flip>전문 <span class="grad">에이전트</span></h2>
+    <div class="row wrap center gap-l mt-l" data-step="1" data-collapse style="max-width:1300px;row-gap:40px" data-anim-children="rise" data-stagger="160">
+      <span class="sd-chip" data-color="orange"><i>₩</i>회계</span>
+      <span class="sd-chip" data-color="green"><i>✉</i>이메일 마케팅</span>
+      <span class="sd-chip" data-color="red"><i>§</i>법무 검토</span>
+      <span class="sd-chip" data-color="cyan"><i>✓</i>티켓 처리</span>
+      <span class="sd-chip" data-color="white"><i>…</i>그리고 더</span>
+    </div>
+  </section>
+
+  <!-- 11. PLAN PILLS -->
+  <section class="slide l-center">
+    <h2 class="t-title" data-anim="rise"><span class="grad">에이전트</span>, 이제 팀 공간에서</h2>
+    <div class="row center gap-m mt-l" data-anim-children="rise" data-stagger="90" data-delay="250">
+      <span class="sd-pill">Pro</span><span class="sd-pill">Business Premium</span><span class="sd-pill">Enterprise</span>
+    </div>
+  </section>
+
+  <!-- 12. THREE PILLARS with focus steps -->
+  <section class="slide l-center" data-bg="stars">
+    <p class="t-h3" data-anim="rise" style="color:var(--sd-ink-2)">모두를 위한 플랫폼</p>
+    <div class="row center gap-xl mt-l" data-focus-group data-anim-children="pop" data-stagger="110" data-delay="200">
+      <span class="sd-chip" data-color="blue" data-focus="1" style="font-size:52px"><i style="width:72px;height:72px">◎</i>모델</span>
+      <span class="sd-chip" data-color="orange" data-focus="2" style="font-size:52px"><i style="width:72px;height:72px">⌘</i>빌드</span>
+      <span class="sd-chip" data-color="green" data-focus="3" style="font-size:52px"><i style="width:72px;height:72px">⊕</i>배포</span>
+    </div>
+  </section>
+
+  <!-- 13. HERO WORD on starfield with sun glow -->
+  <section class="slide l-center" data-bg="stars glow-left">
+    <h1 class="t-hero" data-anim="zoom">Ultrafast</h1>
+    <p class="t-lead mt-m" data-anim="rise" data-delay="250">API · 앱 · CLI 어디서나</p>
+    <p class="t-caption mt-s" data-anim="rise" data-delay="350">최대 8배 빠른 생성 — 초당 300 토큰</p>
+  </section>
+
+  <!-- 14. RACE COMPARE -->
+  <section class="slide" style="justify-content:center">
+    <div class="l-split" style="grid-template-columns:.7fr 1fr 1fr;column-gap:56px">
+      <div class="stack gap-s" data-anim="rise"><p class="t-caption">프롬프트</p><p class="t-h3" style="font-size:40px">흰색 로켓을 큰 창문과 함께 브랜드 컬러로 만들어 줘</p></div>
+      <div class="sd-card sd-race" data-anim="race" data-time="1600" data-color="blue">
+        <div class="sd-race__head"><span class="sd-tag is-accent" data-color="blue" style="--c:var(--sd-blue)">Ultrafast</span><span class="sd-race__time">0.0s</span></div>
+        <div class="sd-race__media"><span style="font-size:120px">🚀</span></div>
+        <div class="sd-race__bar"><i></i></div>
+      </div>
+      <div class="sd-card sd-race" data-anim="race" data-time="7000" data-delay="80" style="--c:#8a8a90">
+        <div class="sd-race__head"><span class="sd-tag">Regular</span><span class="sd-race__time">0.0s</span></div>
+        <div class="sd-race__media"><span style="font-size:120px">🚀</span></div>
+        <div class="sd-race__bar"><i></i></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15. TIER LADDER (FLIP): main tier slides right as lower tiers appear -->
+  <section class="slide l-center">
+    <div class="sd-tiers">
+      <div class="sd-tiers__num" data-step="2" data-collapse data-anim="rise" style="margin-bottom:-20px">100</div>
+      <div class="sd-tiers__num" data-step="1" data-collapse data-anim="rise" style="margin-bottom:110px" data-flip>200</div>
+      <div class="sd-tiers__main" data-anim="rise" data-flip>
+        <div class="sd-tiers__num">Pro 500</div>
+        <ul data-anim-children="rise" data-stagger="70" data-delay="200"><li>Ultrafast 포함</li><li>사용량 제한 없음</li><li>파트너 앱 전체 사용</li><li>Plus 대비 25배</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16. CATEGORY ICONS — focus each in turn -->
+  <section class="slide l-center">
+    <h2 class="t-h2" data-anim="rise">모든 영역에서 최전선</h2>
+    <div class="row center gap-xl mt-xl" data-focus-group data-anim-children="pop" data-stagger="80" data-delay="200">
+      <div class="stack gap-s" style="align-items:center" data-focus="1"><span class="sd-icon is-lg" data-color="blue" style="--c:var(--sd-blue)">◉</span><span class="t-h3 c-blue" style="font-size:36px">지능</span></div>
+      <div class="stack gap-s" style="align-items:center" data-focus="2"><span class="sd-icon is-lg" style="--c:var(--sd-green)">₩</span><span class="t-h3 c-green" style="font-size:36px">가격</span></div>
+      <div class="stack gap-s" style="align-items:center" data-focus="3"><span class="sd-icon is-lg" style="--c:var(--sd-white)">⚡</span><span class="t-h3 c-white" style="font-size:36px">속도</span></div>
+      <div class="stack gap-s" style="align-items:center" data-focus="4"><span class="sd-icon is-lg" style="--c:var(--sd-orange)">◐</span><span class="t-h3 c-orange" style="font-size:36px">이미지</span></div>
+      <div class="stack gap-s" style="align-items:center" data-focus="5"><span class="sd-icon is-lg" style="--c:var(--sd-violet)">♪</span><span class="t-h3 c-violet" style="font-size:36px">음성</span></div>
+    </div>
+  </section>
+
+  <!-- 17. KINETIC WORD -->
+  <section class="slide" style="justify-content:center;padding:0">
+    <div class="sd-kinetic c-blue" data-anim="fly" style="padding-left:200px">Intelligence</div>
+  </section>
+
+  <!-- 18. QUOTE -->
+  <section class="slide l-center">
+    <p class="t-caption" data-anim="rise">2026년 10월 28일</p>
+    <blockquote class="sd-quote mt-m w-80" data-anim="words" data-word-stagger="40">“연말까지 <span class="hl">연구 인턴 수준의 AI</span>를 목표로 계획을 세우고 있습니다.”</blockquote>
+  </section>
+
+  <!-- 19. TITLE + LINE CHART (slow live draw over scatter) -->
+  <section class="slide">
+    <div class="l-split grow" style="grid-template-columns:.55fr 1.45fr">
+      <h2 class="t-h2" data-anim="rise">에이전트 성능<br>최적화</h2>
+      <div class="sd-chart" data-anim="chart" data-type="line" data-values="12,14,15,15,21,26,26,27,33,38,44,45,52,61" data-labels="1월,4월,7월,10월" data-color="blue" data-duration="6000" data-scatter="140" data-end-label="false" style="height:640px"></div>
+    </div>
+  </section>
+
+  <!-- 20. TITLE + BAR CHART highlight -->
+  <section class="slide">
+    <div class="l-split grow" style="grid-template-columns:.6fr 1.4fr">
+      <div class="stack gap-s"><h2 class="t-h2" data-anim="rise">안전성 스트레스 테스트</h2><p class="t-caption" data-anim="rise" data-delay="120">낮을수록 좋음</p></div>
+      <div class="sd-chart" data-anim="chart" data-type="bar" data-values="9.6,5.7,2.4" data-labels="모델 A,모델 B,Pulse 6" data-highlight="2" data-color="blue" data-suffix="%" style="height:620px"></div>
+    </div>
+  </section>
+
+  <!-- 21. PRICE TABLE with sun glow -->
+  <section class="slide" data-bg="stars glow-left">
+    <div class="l-split grow" style="grid-template-columns:1fr 1fr">
+      <h2 class="t-display" data-anim="left" style="padding-left:80px">Pulse 6.1</h2>
+      <table class="sd-table" data-anim-children="rise" data-stagger="70">
+        <tr><th></th><th>Pulse 6.1</th><th>Pulse 6 Nova</th></tr>
+        <tr><td>입력</td><td class="is-best">$2.00</td><td>$10.00</td></tr>
+        <tr><td>캐시 입력</td><td class="is-best">$0.20</td><td>$1.00</td></tr>
+        <tr><td>출력</td><td class="is-best">$12.00</td><td>$60.00</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- 22. LOCKUP SWAP -->
+  <section class="slide l-center">
+    <div class="sd-lockup" data-anim="zoom" data-until="1" data-collapse>
+      <span class="sd-icon is-xl is-app" style="--c:var(--sd-blue);color:#fff">›_</span>
+      <span class="t-display" style="text-align:left">Relay<br>Harness</span>
+    </div>
+    <div class="sd-lockup" data-step="1" data-anim="rise">
+      <span class="sd-icon is-lg is-app" style="--c:var(--sd-blue);color:#fff">☁</span>
+      <span class="t-display">클라우드에서</span>
+    </div>
+  </section>
+
+  <!-- 23. LOGO ROW -->
+  <section class="slide l-center">
+    <p class="t-h3" data-anim="rise" style="color:var(--sd-ink-2)">함께하는 파트너</p>
+    <div class="row center gap-xl mt-xl" data-anim-children="rise" data-stagger="120" data-delay="200">
+      <span class="sd-logo">northwind</span><span class="sd-logo">◆ lattice</span><span class="sd-logo">❄ glacier</span><span class="sd-logo">tidepool</span>
+    </div>
+  </section>
+
+  <!-- 24. BIG STATS -->
+  <section class="slide" style="justify-content:center">
+    <div class="l-split" style="grid-template-columns:.8fr 1.2fr">
+      <h2 class="t-title" data-anim="mask"><span>가장 빠른</span><span>API, <span class="hl">어디서나</span></span></h2>
+      <div class="stack gap-l">
+        <div class="row gap-xl" data-anim-children="rise" data-stagger="120" data-delay="200">
+          <div class="sd-stat" data-color="green"><span class="sd-stat__num" data-anim="count">30%+</span><span class="sd-stat__label">툴 호출 워크플로 속도 향상</span></div>
+          <div class="sd-stat" data-color="violet"><span class="sd-stat__num" data-anim="count">45%+</span><span class="sd-stat__label">첫 토큰까지 시간 단축</span></div>
+        </div>
+        <div class="sd-stat" data-color="red" data-anim="rise" data-delay="450"><span class="sd-stat__num" data-anim="count" data-delay="450">99.9%+</span><span class="sd-stat__label">API 가동률</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 25. HEADLINE IN A FLOATING COLLAGE -->
+  <section class="slide l-center" data-bg="stars">
+    <div class="sd-float" data-anim="blur" data-delay="0"   style="left:150px;top:120px;width:300px;height:200px;background:linear-gradient(135deg,#6b8f71,#2e4a3a)"></div>
+    <div class="sd-float" data-anim="blur" data-delay="80"  style="left:230px;top:620px;width:260px;height:320px;background:linear-gradient(135deg,#c9a27c,#6d4c3d)"></div>
+    <div class="sd-float" data-anim="blur" data-delay="160" style="left:1440px;top:140px;width:330px;height:220px;background:linear-gradient(135deg,#7aa0c8,#2d4766)"></div>
+    <div class="sd-float" data-anim="blur" data-delay="240" style="left:1360px;top:640px;width:300px;height:300px;background:linear-gradient(135deg,#d88a8a,#7a3240)"></div>
+    <div class="sd-float" data-anim="blur" data-delay="320" style="left:620px;top:80px;width:200px;height:140px;background:linear-gradient(135deg,#b8b0e8,#5a4f9a);opacity:.7"></div>
+    <div class="sd-float" data-anim="blur" data-delay="400" style="left:1080px;top:820px;width:220px;height:150px;background:linear-gradient(135deg,#e6d38a,#8a7430);opacity:.7"></div>
+    <h2 class="t-title" data-anim="mask" data-delay="300" style="position:relative;z-index:3"><span class="c-green">8억 명이</span><span>매주 사용합니다</span></h2>
+  </section>
+
+  <!-- 26. RECAP BENTO — everything we announced -->
+  <section class="slide" style="padding:80px 100px">
+    <div class="sd-bento" style="grid-template-rows:repeat(3,1fr)" data-anim-children="zoom" data-stagger="45">
+      <div class="sd-tile c-3 r-2 is-center" style="background:#0f1013"><span class="t-display sheen">Orbit</span><div class="sd-dots-row mt-m" style="gap:14px"><span class="sd-dot" data-color="cyan" data-face="^ ^" style="--size:54px"></span><span class="sd-dot" data-color="orange" data-face="o o" style="--size:54px"></span><span class="sd-dot" data-color="violet" data-face="- -" style="--size:54px"></span></div></div>
+      <div class="sd-tile c-3 is-accent" style="--c:var(--sd-blue)"><span class="t-caption">새 모델</span><span class="t-h3">Pulse 6.1</span></div>
+      <div class="sd-tile c-3 is-light"><span class="t-caption" style="color:#666">속도</span><span class="t-h3">Ultrafast</span></div>
+      <div class="sd-tile c-3" style="background:#0f1013"><canvas class="sd-spiral" data-count="700"></canvas><span class="sd-tile__label" style="color:#fff">Pulse 6 Nova</span></div>
+      <div class="sd-tile c-2 is-accent" style="--c:var(--sd-green)"><span class="t-caption">팀</span><span class="t-h3" style="font-size:40px">Space</span></div>
+      <div class="sd-tile c-4 sd-placeholder">제품 스크린샷</div>
+      <div class="sd-tile c-3 is-accent" style="--c:var(--sd-violet)"><span class="t-caption">요금제</span><span class="t-h3">Pro 500</span></div>
+      <div class="sd-tile c-4 is-light"><span class="t-caption" style="color:#666">개발자</span><span class="t-h3">Relay Harness</span></div>
+      <div class="sd-tile c-3 is-accent" style="--c:var(--sd-orange)"><span class="t-caption">보안</span><span class="t-h3" style="font-size:40px">Private Mode</span></div>
+      <div class="sd-tile c-2 is-center" style="background:#0f1013"><div class="sd-orb" style="width:56%"></div></div>
+      <div class="sd-tile c-3 is-accent" style="--c:var(--sd-cyan)"><span class="t-caption">마켓</span><span class="t-h3" style="font-size:40px">Marketplace</span></div>
+    </div>
+  </section>
+
+  <!-- 27. AGENDA COLUMNS -->
+  <section class="slide">
+    <h2 class="t-h2" data-anim="rise">오늘의 세션</h2>
+    <div class="sd-agenda mt-l" data-anim-children="rise" data-stagger="110" data-delay="150">
+      <div style="--c:var(--sd-orange)"><h4>메인 홀</h4><ul><li>오픈소스와 함께 만들기</li><li>Orbit Game Studio</li><li>플랫폼의 다음 단계</li><li>클로징 Q&amp;A</li></ul></div>
+      <div style="--c:var(--sd-red)"><h4>스튜디오 A</h4><ul><li>무엇을 만들 수 있을까</li><li>에이전트를 서비스로</li><li>웹앱의 다음 세대</li></ul></div>
+      <div style="--c:var(--sd-blue)"><h4>스튜디오 B</h4><ul><li>루프 다음에 오는 것</li><li>보안: 취약점에서 수정까지</li><li>모델을 유용하게 만드는 법</li></ul></div>
+      <div style="--c:var(--sd-green)"><h4>야외 무대</h4><ul><li>지능을 위한 과잉 설계 멈추기</li><li>에이전트가 직접 만드는 앱</li><li>마지막 인간 코드 리뷰</li></ul></div>
+    </div>
+  </section>
+
+  <!-- 28. FILM TITLE — bokeh disc collapses, letters resolve outward; exits with a right-to-left smear -->
+  <section class="slide l-center" data-bg="black">
+    <h1 class="t-hero t-glowmark" data-anim="bokeh" data-seed="1" data-exit="smear">Orbit</h1>
+  </section>
+
+  <!-- 29. WORDMARK + PHONE CHAT — wordmark is a persistent anchor (data-keep) across the next slides -->
+  <section class="slide" style="padding:0" data-transition="beat">
+    <div class="t-hero" data-keep="orbit" data-anim="fade" style="position:absolute;left:160px;top:400px">Orbit</div>
+    <div class="sd-phone" data-anim="fade" style="position:absolute;left:1160px;top:110px;height:1060px">
+      <div class="sd-phone__status"><span>9:41</span><span>●●●</span></div>
+      <div class="sd-phone__head"><span class="sd-dot" data-color="green" data-face="o o"></span>Orbit</div>
+      <div class="sd-phone__body">
+        <div class="sd-chat is-phone" data-anim="chat" data-delay="500" style="padding-bottom:170px">
+          <div class="sd-msg is-me" data-at="0">이번 주 일정 좀 정리해 줘</div>
+          <div class="sd-msg is-note" data-at="500">읽음</div>
+          <div class="sd-msg is-typing" data-at="1500" data-hide-at="2900"><i></i><i></i><i></i></div>
+          <div class="sd-msg" data-at="2900">화요일 오후가 비어 있어요. 팀 회의를 3시로 옮기고 금요일엔 출장 준비 시간을 잡아 둘게요.</div>
+          <div class="sd-msg is-me" data-at="4700">좋아, 그렇게 해 줘</div>
+          <div class="sd-msg is-typing" data-at="5300" data-hide-at="6400"><i></i><i></i><i></i></div>
+          <div class="sd-msg" data-at="6400">완료했어요. 참석자에게 변경 알림도 보냈어요.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 30. DEVICE HUB — same anchor; phone bleeds off the bottom, tiles fade in in random order -->
+  <section class="slide" style="padding:0" data-transition="beat">
+    <div class="t-hero" data-keep="orbit" data-anim="fade" style="position:absolute;left:160px;top:400px">Orbit</div>
+    <div class="sd-phone" data-anim="fade" style="position:absolute;left:1160px;top:150px;height:1060px">
+      <div class="sd-phone__status"><span>9:41</span><span>●●●</span></div>
+      <div class="sd-phone__head" style="align-items:flex-start;padding-left:34px;font-size:30px;color:#111;font-weight:640">연결된 앱</div>
+      <div class="sd-phone__body" style="padding:24px 30px;display:flex;flex-direction:column;gap:18px;font-size:24px">
+        <div>📅 캘린더</div><div>✉️ 메일</div><div>📁 드라이브</div><div>💬 메신저</div><div>🧾 회계</div>
+      </div>
+    </div>
+    <div data-anim-children="ui" data-stagger="100" data-stagger-order="random" data-delay="300">
+      <div class="sd-sat" style="left:930px;top:230px"><span style="font-size:44px;font-weight:700">4K+</span><span>연결 가능한 앱<small>오늘 기준</small></span></div>
+      <div class="sd-sat is-tile" style="left:1660px;top:180px">📅</div>
+      <div class="sd-sat is-tile" style="left:1700px;top:420px">✉️</div>
+      <div class="sd-sat is-tile" style="left:1010px;top:520px">📁</div>
+      <div class="sd-sat is-tile" style="left:1680px;top:680px">💬</div>
+      <div class="sd-sat is-tile is-ghost" style="left:960px;top:760px"></div>
+      <div class="sd-sat is-tile is-ghost" style="left:1800px;top:40px"></div>
+    </div>
+  </section>
+
+  <!-- 31. PRODUCT UI + FEATURE NAV — the window stays, only its content swaps with the nav focus -->
+  <section class="slide">
+    <div class="l-split grow is-wide-left" style="column-gap:80px">
+      <div class="sd-card sd-window" data-anim="focus" style="height:760px">
+        <div class="sd-window__bar"><i></i><i></i><i></i></div>
+        <div class="sd-window__body sd-swap" style="padding:40px 48px">
+          <div data-focus="0 1"><b style="font-size:34px">배포 베타 트래커</b><div style="margin-top:26px">DOC</div></div>
+          <div data-focus="2"><b style="font-size:34px">에이전트와 함께 쓰기</b><div style="margin-top:26px">DOC</div></div>
+          <div data-focus="3"><b style="font-size:34px">페이지 관리</b><div style="margin-top:26px">DOC</div></div>
+        </div>
+      </div>
+      <div class="sd-nav" data-focus-group data-anim-children="ui" data-stagger="80">
+        <div class="sd-nav__item" data-focus="0 1"><i>●</i>살아있는 문서</div>
+        <div class="sd-nav__item" data-focus="2"><i>●</i>에이전트와 협업</div>
+        <div class="sd-nav__item" data-focus="3"><i>●</i>페이지 관리</div>
+        <div class="sd-nav__item"><i>●</i>프레젠테이션<small>곧 출시</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 32. CAMERA INSIDE A SCREENSHOT — zoom to a detail, back out, then scroll the long document -->
+  <section class="slide l-center">
+    <div class="sd-shot is-light" data-anim="focus" style="width:1180px;height:860px">
+      <div class="sd-cam" data-cam="0:50% 50% 1 | 1:14% 9% 2.4 | 2:50% 50% 1">
+        <div data-scroll-step="3" data-duration="1100" style="padding:56px 64px;text-align:left">
+          <div style="display:inline-block;padding:8px 18px;border-radius:999px;background:var(--sd-blue);color:#fff;font-size:22px;font-weight:600;margin-bottom:28px">AI 요약</div>
+          <div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:72%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:88%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:58%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:72%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:88%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:58%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:72%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:88%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:58%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:72%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:88%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:58%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:72%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:88%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:58%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:72%"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 33. APP ICON + INTEGRATION GRID -->
+  <section class="slide l-center">
+    <div class="sd-applockup">
+      <div class="stack gap-s" style="align-items:center" data-anim="focus"><span class="sd-appicon__icon" style="--c:var(--sd-green);width:220px;height:220px;font-size:90px">◕◕</span><span class="t-h3" style="font-size:34px">Dottie</span></div>
+      <div class="sd-applockup__grid" data-anim-children="rise" data-stagger="95" data-delay="170" data-dist="12" data-spring="smooth">
+        <figure><i>◎</i><figcaption>Orbit</figcaption></figure><figure><i>#</i><figcaption>메신저</figcaption></figure><figure><i>▦</i><figcaption>시트</figcaption></figure><figure><i>☎</i><figcaption>전화</figcaption></figure>
+        <figure><i>▭</i><figcaption>컴퓨터</figcaption></figure><figure><i>⌘</i><figcaption>VM</figcaption></figure><figure><i>▯</i><figcaption>모바일</figcaption></figure><figure><i>⚙</i><figcaption>플러그인</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 34. LIVE DEMO FRAME — LED layout; → swaps the recording; → switches to window + PIP (hard cut); exits with a dip to black -->
+  <section class="slide sd-demo" data-bg="black" data-step-class="2:is-program" data-transition="dip">
+    <div class="sd-demo__window sd-swap">
+      <div class="sd-placeholder" data-focus="0" style="background:#f4f4f1;color:#888">데모 화면 1 (video / img)</div>
+      <div class="sd-placeholder" data-focus="1 2" style="background:#1b1c20">데모 화면 2</div>
+    </div>
+    <div class="sd-pip sd-placeholder">발표자 카메라</div>
+  </section>
+
+  <!-- 35. APP ICON CARD — arrives after the dip with a plain fade -->
+  <section class="slide l-center">
+    <div class="sd-appicon" data-anim="fade" style="margin-top:-60px">
+      <div class="sd-appicon__icon" style="--c:var(--sd-green)">◕◕</div>
+      <div class="sd-appicon__name">Dottie</div>
+    </div>
+  </section>
+
+  <!-- 36. 3D COLLAGE FLY-THROUGH — cards drift with parallax and a slow dolly, the title stays put -->
+  <section class="slide l-center">
+    <div class="sd-flythrough" data-anim-children="fade" data-stagger="60">
+      <div data-z="0" style="left:260px;top:120px;width:300px;height:200px;background:linear-gradient(135deg,#7b9b80,#33503f);opacity:.6"></div>
+      <div data-z="2" style="left:620px;top:660px;width:380px;height:250px;background:linear-gradient(135deg,#b49ce8,#55479a)"><span class="sd-nametag" style="--c:var(--sd-yellow)">지우</span></div>
+      <div data-z="1" style="left:1180px;top:110px;width:340px;height:220px;background:linear-gradient(135deg,#86a8d0,#2f4b6c)"></div>
+      <div data-z="3" style="left:1400px;top:560px;width:460px;height:300px;background:linear-gradient(135deg,#e09a8a,#7c3a40)"><span class="sd-nametag" style="--c:var(--sd-cyan)">민준</span></div>
+      <div data-z="0" style="left:1700px;top:250px;width:260px;height:170px;background:linear-gradient(135deg,#d8c27a,#7f6a2b);opacity:.6"></div>
+      <div data-z="1" style="left:130px;top:620px;width:320px;height:210px;background:linear-gradient(135deg,#8fd0c0,#2f6a5c)"></div>
+    </div>
+    <h2 class="t-display" data-anim="rise" style="position:relative;z-index:3">팀 <span class="grad">스페이스</span></h2>
+  </section>
+
+  <!-- 37. STACKED AREA CHART + AGENT STATUS PILL -->
+  <section class="slide" style="justify-content:center">
+    <div class="stack gap-m">
+      <div class="sd-agentpill" data-anim="ui"><b>+</b><span style="width:1px;height:28px;background:rgba(0,0,0,.15)"></span><span><b data-anim="tick" data-from="38" data-format="작업 중 · {n}초"></b><br><span class="sd-shimmer" style="font-size:20px">생각하는 중…</span></span></div>
+      <div class="sd-card" data-anim="focus" style="background:#0b2a28;padding:40px 44px;height:640px">
+        <p style="color:#cfe9e4;font-size:28px;font-weight:600;margin-bottom:20px">고객 피드백 추이</p>
+        <div class="sd-chart" data-anim="chart" data-type="stack" data-values="4,5,4,6,5,7,6,8,7,9,8,10|3,4,3,4,5,4,6,5,6,5,7,6|2,3,2,3,2,4,3,3,4,3,4,5|2,2,3,2,3,3,2,4,3,4,3,4" data-labels="1주,4주,8주,12주" data-duration="1600" style="height:500px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 38. CLOSING — particles assemble the mark, the crew pops in -->
+  <section class="slide l-center" data-bg="stars">
+    <div data-anim="assemble" data-from="center" style="width:300px;height:300px">
+      <svg viewBox="0 0 200 200" width="300" height="300" fill="none" stroke="#f3f3f1" stroke-width="16"><circle cx="100" cy="100" r="62"/><circle cx="100" cy="100" r="24" fill="#f3f3f1" stroke="none"/><circle cx="158" cy="42" r="16" fill="#f3f3f1" stroke="none"/></svg>
+    </div>
+    <p class="t-h2 mt-l" data-anim="rise" data-delay="2300">만드는 사람들에게</p>
+    <div class="sd-dots-row mt-m" data-anim-children="pop" data-stagger="60" data-delay="2600">
+      <span class="sd-dot" data-color="blue" data-face="^ ^" style="--size:64px"></span><span class="sd-dot" data-color="green" data-face="o o" style="--size:64px"></span><span class="sd-dot" data-color="yellow" data-face="- -" style="--size:64px"></span><span class="sd-dot" data-color="orange" data-face="&gt; &lt;" style="--size:64px"></span><span class="sd-dot" data-color="violet" data-face="* *" style="--size:64px"></span><span class="sd-dot" data-color="white" data-face="+ +" style="--size:64px"></span>
+    </div>
+  </section>
+
+</div>
+<div class="sd-bug" data-text="Orbit Day 2026" data-mark-hold="6000" data-hold="9000"></div>
+<script src="../assets/stagedeck.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "stagedeck",
+  "version": "1.0.0",
+  "description": "Build DevDay-style keynote decks as one HTML file: dark LED-wall look, spring motion, dot-matrix names, bento stats, live charts. For presentations, slides, 발표자료, PPT.",
+  "author": { "name": "JiminLee-way" },
+  "homepage": "https://github.com/JiminLee-way/OPENAI-DevDay-Presentation-Template",
+  "license": "MIT",
+  "keywords": ["presentation", "slides", "keynote", "html", "motion"]
+}

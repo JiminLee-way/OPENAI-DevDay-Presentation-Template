@@ -1,0 +1,2110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StageDeck Showcase</title>
+<style>
+/* ==========================================================================
+   StageDeck — keynote-stage HTML slide system
+   1920×1080 logical canvas, scaled to fit. Dark LED-wall aesthetic,
+   spring ("chewy") motion. Pair with stagedeck.js.
+   ========================================================================== */
+
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+
+@property --sd-ps { syntax: "<percentage>"; inherits: true; initial-value: -15%; }
+@property --sd-pf { syntax: "<percentage>"; inherits: true; initial-value: -15%; }
+
+:root {
+  /* surface */
+  --sd-bg: #17181a;
+  --sd-bg-2: #202124;
+  --sd-panel: #f6f6f3;
+  --sd-panel-ink: #121214;
+  --sd-ink: #f3f3f1;
+  --sd-ink-2: rgba(243, 243, 241, .64);
+  --sd-ink-3: rgba(243, 243, 241, .40);
+  --sd-line: rgba(255, 255, 255, .10);
+  --sd-card: rgba(44, 45, 49, .78);
+
+  /* accents (semantic: blue=primary/highlight, green=positive/growth, orange=build/energy,
+     red=warning/uptime, violet=people/brand, cyan=speed/data) */
+  --sd-blue: #4a83ff;
+  --sd-cyan: #44d3e8;
+  --sd-green: #37d27c;
+  --sd-orange: #ff6d2e;
+  --sd-red: #ff5459;
+  --sd-violet: #9d76ff;
+  --sd-lav: #c7b9ff;
+  --sd-yellow: #ffd341;
+  --sd-white: #f3f3f1;
+
+  --sd-grad: linear-gradient(92deg, #cdbfff 0%, #a07cff 42%, #5b82ff 100%);
+  --sd-grad-warm: linear-gradient(92deg, #ffd341 0%, #ff6d2e 60%, #ff5459 100%);
+  --sd-grad-cool: linear-gradient(92deg, #44d3e8 0%, #4a83ff 100%);
+
+  --sd-font: "Pretendard Variable", Pretendard, Inter, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --sd-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+
+  /* motion — JS overwrites the chewy/snappy/jelly tokens with exact spring linear() curves */
+  --sd-ease-expo: cubic-bezier(.16, 1, .3, 1);
+  --sd-ease-out: cubic-bezier(.22, 1, .36, 1);
+  --sd-ease-chewy: cubic-bezier(.3, 1.32, .5, 1);
+  --sd-ease-snappy: cubic-bezier(.2, 1.1, .3, 1);
+  --sd-dur-chewy: 900ms;
+  --sd-dur-snappy: 600ms;
+
+  --sd-pad-x: 150px;
+  --sd-pad-y: 120px;
+  --sd-radius: 28px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: #0a0a0b; overflow: hidden; }
+body {
+  font-family: var(--sd-font);
+  color: var(--sd-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "tnum" 0;
+}
+img { display: block; max-width: 100%; }
+
+/* ---------- viewport + stage ---------- */
+.sd-viewport { position: fixed; inset: 0; overflow: hidden; }
+.sd-stage {
+  position: absolute; left: 50%; top: 50%; margin: -540px 0 0 -960px; width: 1920px; height: 1080px; flex: none;
+  background: var(--sd-bg); overflow: hidden; transform-origin: 50% 50%;
+  isolation: isolate;
+}
+.deck { position: absolute; inset: 0; }
+
+/* ---------- persistent background (the "LED wall") ---------- */
+.sd-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.sd-bg__base {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 0%, #222326 0%, rgba(34,35,38,0) 60%),
+    radial-gradient(90% 70% at 50% 110%, #1c1d20 0%, rgba(28,29,32,0) 70%),
+    var(--sd-bg);
+  transition: background-color 900ms var(--sd-ease-out);
+}
+.sd-bg__stars { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1200ms var(--sd-ease-out); }
+.sd-bg__grain {
+  position: absolute; inset: -50%; opacity: .05; mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: sd-grain 1.2s steps(6) infinite;
+}
+@keyframes sd-grain { 0%{transform:translate(0,0)} 20%{transform:translate(-3%,2%)} 40%{transform:translate(2%,-3%)} 60%{transform:translate(-2%,-1%)} 80%{transform:translate(3%,3%)} 100%{transform:translate(0,0)} }
+
+.sd-glow { position: absolute; border-radius: 50%; opacity: 0; filter: blur(2px);
+  transition: opacity 1100ms var(--sd-ease-out), transform 1600ms var(--sd-ease-expo); }
+.sd-glow--left {   /* the "sun" entering from the left edge */
+  width: 900px; height: 900px; left: -760px; top: 90px;
+  background: radial-gradient(circle at 60% 50%, #fff7e6 0%, #ffe2b0 18%, rgba(255,186,120,.55) 34%, rgba(255,140,80,.12) 55%, rgba(255,120,60,0) 70%);
+  transform: translateX(-160px) scale(.9);
+}
+.sd-glow--horizon {  /* planet-rim glow along the bottom edge */
+  width: 3200px; height: 2400px; left: 50%; top: 860px; margin-left: -1600px;
+  background: radial-gradient(closest-side, rgba(10,10,12,1) 96%, rgba(255,120,50,.9) 98.2%, rgba(255,170,90,.35) 99%, rgba(255,120,50,0) 100%);
+  box-shadow: 0 -40px 140px -30px rgba(255,110,40,.45);
+  transform: translateY(160px);
+}
+.sd-glow--top {  /* soft cool wash from above */
+  width: 2200px; height: 1200px; left: -140px; top: -900px;
+  background: radial-gradient(closest-side, rgba(90,130,255,.30), rgba(90,130,255,0));
+  transform: translateY(-80px);
+}
+.sd-bg__white { position: absolute; inset: 0; background: var(--sd-panel); opacity: 0; transition: opacity 700ms var(--sd-ease-out); }
+
+.sd-stage.bg-stars .sd-bg__stars,
+.sd-stage.bg-warp .sd-bg__stars { opacity: 1; }
+.sd-stage.bg-glow-left .sd-glow--left { opacity: 1; transform: none; }
+.sd-stage.bg-horizon .sd-glow--horizon { opacity: 1; transform: none; }
+.sd-stage.bg-top .sd-glow--top { opacity: 1; transform: none; }
+.sd-stage.bg-white .sd-bg__white { opacity: 1; }
+.sd-stage.bg-black .sd-bg__base { background: #000; }
+.sd-stage.bg-white { color: var(--sd-panel-ink); }
+
+/* ---------- slides ---------- */
+.slide {
+  position: absolute; inset: 0; z-index: 1;
+  padding: var(--sd-pad-y) var(--sd-pad-x);
+  visibility: hidden; pointer-events: none;
+  display: flex; flex-direction: column;
+}
+.slide.is-active, .slide.is-leaving { visibility: visible; }
+.slide.is-active { pointer-events: auto; z-index: 2; }
+.slide.is-leaving { z-index: 1; }
+.slide.on-white { color: var(--sd-panel-ink); --sd-ink: var(--sd-panel-ink); --sd-ink-2: rgba(18,18,20,.62); --sd-ink-3: rgba(18,18,20,.38); --sd-line: rgba(0,0,0,.1); }
+.slide .speaker-notes, .slide aside.notes { display: none !important; }
+
+/* elements that animate start hidden until the engine plays them */
+.sd-ready .slide [data-anim],
+.sd-ready .slide [data-step] { opacity: 0; }
+.sd-ready .slide [data-anim].is-in,
+.sd-ready .slide [data-step].is-in { opacity: 1; }
+
+/* ---------- typography ---------- */
+.t-hero    { font-size: 236px; line-height: .94; font-weight: 620; letter-spacing: -.048em; }
+.t-display { font-size: 150px; line-height: 1;   font-weight: 580; letter-spacing: -.042em; }
+.t-title   { font-size: 108px; line-height: 1.04; font-weight: 560; letter-spacing: -.036em; }
+.t-h2      { font-size: 76px;  line-height: 1.1; font-weight: 540; letter-spacing: -.03em; }
+.t-h3      { font-size: 50px;  line-height: 1.16; font-weight: 520; letter-spacing: -.022em; }
+.t-lead    { font-size: 42px;  line-height: 1.32; font-weight: 450; letter-spacing: -.016em; color: var(--sd-ink-2); }
+.t-body    { font-size: 34px;  line-height: 1.45; font-weight: 430; letter-spacing: -.01em;  color: var(--sd-ink-2); }
+.t-caption { font-size: 25px;  line-height: 1.38; font-weight: 460; letter-spacing: -.004em; color: var(--sd-ink-3); }
+.t-eyebrow { font-size: 24px;  line-height: 1.2; font-weight: 560; letter-spacing: .01em; color: var(--sd-ink-3); }
+.t-mono    { font-family: var(--sd-mono); letter-spacing: 0; }
+:lang(ko) .t-hero, :lang(ko) .t-display, :lang(ko) .t-title { letter-spacing: -.03em; }
+:lang(ko) .t-h2, :lang(ko) .t-h3 { letter-spacing: -.022em; }
+:lang(ko) { word-break: keep-all; }
+
+.grad      { background: var(--sd-grad); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-box-decoration-break: clone; padding-bottom: .06em; }
+.grad-warm { background: var(--sd-grad-warm); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.grad-cool { background: var(--sd-grad-cool); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hl { color: var(--sd-blue); }
+.dim { color: var(--sd-ink-3); }
+.c-blue{color:var(--sd-blue)} .c-cyan{color:var(--sd-cyan)} .c-green{color:var(--sd-green)} .c-orange{color:var(--sd-orange)}
+.c-red{color:var(--sd-red)} .c-violet{color:var(--sd-violet)} .c-lav{color:var(--sd-lav)} .c-yellow{color:var(--sd-yellow)} .c-white{color:var(--sd-white)}
+[data-color="blue"]{--c:var(--sd-blue)} [data-color="cyan"]{--c:var(--sd-cyan)} [data-color="green"]{--c:var(--sd-green)}
+[data-color="orange"]{--c:var(--sd-orange)} [data-color="red"]{--c:var(--sd-red)} [data-color="violet"]{--c:var(--sd-violet)}
+[data-color="lav"]{--c:var(--sd-lav)} [data-color="yellow"]{--c:var(--sd-yellow)} [data-color="white"]{--c:var(--sd-white)}
+
+/* split-text helpers created by JS */
+.sd-mask { display: block; overflow: hidden; padding: .04em 0 .1em; margin: -.04em 0 -.1em; }
+.sd-mask > .sd-mask__in { display: block; will-change: transform; }
+.sd-word { display: inline-block; white-space: pre; will-change: transform, filter; }
+
+/* ---------- layout primitives ---------- */
+.l-center { justify-content: center; align-items: center; text-align: center; }
+.l-bottom { justify-content: flex-end; }
+.stack { display: flex; flex-direction: column; }
+.row { display: flex; align-items: center; }
+.gap-xs{gap:12px} .gap-s{gap:20px} .gap-m{gap:36px} .gap-l{gap:64px} .gap-xl{gap:110px}
+.mt-s{margin-top:20px} .mt-m{margin-top:40px} .mt-l{margin-top:72px} .mt-xl{margin-top:120px}
+.grow { flex: 1 1 auto; min-height: 0; }
+.wrap { flex-wrap: wrap; }
+.center { justify-content: center; }
+.w-60 { max-width: 60%; } .w-70 { max-width: 70%; } .w-80 { max-width: 80%; }
+
+/* split: title column + media column */
+.l-split { display: grid !important; grid-template-columns: 0.82fr 1.18fr; align-items: center; column-gap: 96px; }
+.l-split.is-even { grid-template-columns: 1fr 1fr; }
+.l-split.is-wide-left { grid-template-columns: 1.2fr .8fr; }
+.l-split > .stack { justify-content: center; }
+
+/* ---------- components ---------- */
+
+/* status line under a title ("In preview", "Available today") */
+.sd-status { display: inline-flex; align-items: center; gap: 14px; font-size: 28px; font-weight: 480; color: var(--sd-ink-3); }
+.sd-status::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--sd-ink-3)); box-shadow: 0 0 14px var(--c, transparent); }
+
+/* ✓ pill */
+.sd-pill {
+  display: inline-flex; align-items: center; gap: 16px;
+  padding: 18px 30px 18px 22px; border-radius: 999px;
+  font-size: 30px; font-weight: 520; letter-spacing: -.01em; color: var(--sd-ink);
+  background: rgba(255,255,255,.06); border: 1px solid var(--sd-line);
+}
+.sd-pill::before {
+  content: ""; width: 30px; height: 30px; border-radius: 50%; flex: none;
+  background: var(--c, var(--sd-green)) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M6.5 12.5l3.5 3.5 7.5-8' fill='none' stroke='%23111' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/70% no-repeat;
+}
+.sd-pill.is-plain::before { display: none; }
+.sd-pill.is-plain { padding: 18px 30px; }
+
+/* colored icon chip: <span class="sd-chip" data-color="orange"><i>✦</i>Accounting</span> */
+.sd-chip { display: inline-flex; align-items: center; gap: 18px; font-size: 36px; font-weight: 520; letter-spacing: -.015em; color: var(--c, var(--sd-ink)); }
+.sd-chip > i, .sd-icon {
+  width: 56px; height: 56px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  font-style: normal; font-size: 26px; font-weight: 700; color: #111;
+  background: var(--c, var(--sd-white));
+  box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 10px 40px -10px var(--c, transparent);
+}
+.sd-chip > i svg, .sd-icon svg { width: 58%; height: 58%; }
+.sd-icon.is-lg { width: 120px; height: 120px; font-size: 54px; }
+.sd-icon.is-xl { width: 180px; height: 180px; font-size: 80px; }
+.sd-icon.is-app { border-radius: 30%; }
+
+/* light card (product UI, compare cards, pull quotes) */
+.sd-card {
+  background: var(--sd-panel); color: var(--sd-panel-ink); border-radius: var(--sd-radius);
+  box-shadow: 0 40px 120px -30px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);
+  overflow: hidden; position: relative;
+}
+.sd-card.is-pad { padding: 48px 52px; }
+.sd-card.is-dark { background: #232428; color: var(--sd-ink); box-shadow: 0 0 0 1px var(--sd-line), 0 40px 120px -40px rgba(0,0,0,.8); }
+.sd-card > img { width: 100%; height: 100%; object-fit: cover; }
+.sd-tag { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 999px; font-size: 20px; font-weight: 600; background: rgba(0,0,0,.06); color: inherit; }
+.sd-tag.is-accent { background: var(--c, var(--sd-blue)); color: #fff; }
+
+/* media frame (screenshot / video / image placeholder) */
+.sd-shot { border-radius: 26px; overflow: hidden; background: #2a2b2f; position: relative;
+  box-shadow: 0 0 0 1px var(--sd-line), 0 50px 140px -40px rgba(0,0,0,.85); }
+.sd-shot > img, .sd-shot > video { width: 100%; height: 100%; object-fit: cover; }
+.sd-shot.is-light { background: var(--sd-panel); }
+.sd-placeholder { display: grid; place-items: center; color: var(--sd-ink-3); font-size: 26px; font-weight: 500;
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 18px, rgba(255,255,255,.015) 18px 36px), #222327; }
+.sd-shot.is-light .sd-placeholder { color: rgba(0,0,0,.35); background: repeating-linear-gradient(135deg, rgba(0,0,0,.035) 0 18px, rgba(0,0,0,.015) 18px 36px), #f1f1ee; }
+
+/* app window chrome */
+.sd-window { display: flex; flex-direction: column; }
+.sd-window__bar { height: 52px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 20px; border-bottom: 1px solid rgba(0,0,0,.07); }
+.sd-window__bar i { width: 13px; height: 13px; border-radius: 50%; background: rgba(0,0,0,.14); }
+.sd-card.is-dark .sd-window__bar { border-color: var(--sd-line); }
+.sd-card.is-dark .sd-window__bar i { background: rgba(255,255,255,.16); }
+.sd-window__body { flex: 1; position: relative; min-height: 0; }
+
+/* ---------- dot characters ---------- */
+.sd-dot {
+  --size: 120px;
+  width: var(--size); height: var(--size); border-radius: 50%; flex: none;
+  background: var(--c, var(--sd-green)); position: relative; display: inline-flex; align-items: center; justify-content: center;
+  gap: calc(var(--size) * .14); color: #121214;
+  box-shadow: inset 0 calc(var(--size) * -.06) calc(var(--size) * .12) rgba(0,0,0,.12);
+}
+.sd-dot > i { font-style: normal; font-weight: 600; font-size: calc(var(--size) * .3); line-height: 1; display: inline-block;
+  transform-origin: 50% 60%; transition: transform 380ms var(--sd-ease-chewy); }
+.sd-dot.is-blink > i { transform: scaleY(.12); transition-duration: 90ms; }
+.sd-dot[data-color="white"] { color: #121214; }
+.sd-dot.is-outline { background: transparent; box-shadow: inset 0 0 0 3px var(--c, var(--sd-green)); color: var(--c, var(--sd-green)); }
+.sd-dots-row { display: flex; align-items: center; gap: 44px; }
+
+/* ---------- stats ---------- */
+.sd-stat { display: flex; flex-direction: column; gap: 10px; }
+.sd-stat__num { font-size: 136px; line-height: .95; font-weight: 560; letter-spacing: -.045em; color: var(--c, var(--sd-ink)); font-variant-numeric: tabular-nums; }
+.sd-stat__label { font-size: 28px; line-height: 1.3; font-weight: 470; color: var(--sd-ink-2); max-width: 15em; }
+.sd-stat.is-sm .sd-stat__num { font-size: 92px; }
+.sd-stat.is-inline { flex-direction: row; align-items: center; gap: 22px; }
+.sd-stat.is-inline .sd-stat__label { color: var(--c, var(--sd-ink-2)); font-size: 30px; }
+.sd-stats { display: grid; grid-auto-flow: column; gap: 70px; align-items: end; }
+
+/* ---------- bento ---------- */
+.sd-bento { display: grid; gap: 22px; grid-template-columns: repeat(12, 1fr); grid-auto-rows: 1fr; height: 100%; }
+.sd-tile {
+  position: relative; border-radius: 26px; overflow: hidden; min-height: 0;
+  background: #222327; box-shadow: inset 0 0 0 1px var(--sd-line);
+  display: flex; flex-direction: column; justify-content: flex-end; padding: 30px 34px;
+}
+.sd-tile.is-light { background: var(--sd-panel); color: var(--sd-panel-ink); box-shadow: none; }
+.sd-tile.is-clear { background: transparent; box-shadow: none; }
+.sd-tile.is-center { justify-content: center; align-items: center; text-align: center; }
+.sd-tile > img.cover, .sd-tile > video.cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sd-tile .sd-stat__num { font-size: 104px; }
+.sd-tile__label { font-size: 26px; font-weight: 500; color: var(--sd-ink-2); position: relative; }
+.c-1{grid-column:span 1} .c-2{grid-column:span 2} .c-3{grid-column:span 3} .c-4{grid-column:span 4} .c-5{grid-column:span 5}
+.c-6{grid-column:span 6} .c-7{grid-column:span 7} .c-8{grid-column:span 8} .c-12{grid-column:span 12}
+.r-2{grid-row:span 2} .r-3{grid-row:span 3}
+
+/* living tile micro-loops */
+.sd-orb { width: 46%; aspect-ratio: 1; border-radius: 50%; margin: auto;
+  background: radial-gradient(circle at 34% 30%, #ffffff 0%, #dfe6ff 18%, #8fa6ff 46%, #4b5bd6 72%, #262a6a 100%);
+  box-shadow: 0 0 80px -10px rgba(110,140,255,.6); animation: sd-orb 7s ease-in-out infinite; }
+@keyframes sd-orb { 0%,100% { transform: translateY(0) scale(1); filter: hue-rotate(0deg); } 50% { transform: translateY(-6%) scale(1.04); filter: hue-rotate(28deg); } }
+canvas.sd-spiral { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sd-typing::after { content: "▍"; margin-left: 2px; animation: sd-caret 1s steps(1) infinite; color: var(--sd-blue); }
+@keyframes sd-caret { 50% { opacity: 0; } }
+
+/* ---------- quote-card cloud (depth of field) ---------- */
+.sd-cloud { position: absolute; inset: 0; }
+.sd-qcard {
+  position: absolute; width: 560px; padding: 30px 34px 32px; border-radius: 24px;
+  background: var(--sd-card); box-shadow: inset 0 0 0 1px var(--sd-line), 0 30px 80px -30px rgba(0,0,0,.7);
+  backdrop-filter: blur(6px); color: var(--sd-ink);
+}
+.sd-qcard__who { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.sd-qcard__avatar { width: 46px; height: 46px; border-radius: 50%; background: var(--c, #555); flex: none; display: grid; place-items: center; font-size: 20px; font-weight: 700; color: #111; }
+.sd-qcard__name { font-size: 22px; font-weight: 620; line-height: 1.2; }
+.sd-qcard__handle { font-size: 19px; color: var(--sd-ink-3); }
+.sd-qcard__text { font-size: 27px; line-height: 1.42; font-weight: 450; letter-spacing: -.008em; }
+.sd-qcard__check { position: absolute; top: 26px; right: 26px; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--sd-green) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M6.5 12.5l3.5 3.5 7.5-8' fill='none' stroke='%23111' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/70% no-repeat; }
+.sd-cloud__label { position: absolute; left: var(--sd-pad-x); top: var(--sd-pad-y); }
+
+/* ---------- dot-matrix text (speaker names, reveals) ---------- */
+.sd-dottext { position: relative; display: inline-block; }
+.sd-dottext__stroke, .sd-dottext__fill { display: block; }
+.sd-dottext__stroke { position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 2px var(--sd-violet);
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--sd-ps) - 6%), transparent calc(var(--sd-ps) + 2%));
+          mask-image: linear-gradient(90deg, #000 calc(var(--sd-ps) - 6%), transparent calc(var(--sd-ps) + 2%)); }
+.sd-dottext__fill {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--sd-pf) - 8%), transparent calc(var(--sd-pf) + 4%));
+          mask-image: linear-gradient(90deg, #000 calc(var(--sd-pf) - 8%), transparent calc(var(--sd-pf) + 4%)); }
+.sd-dottext canvas { position: absolute; pointer-events: none; }
+.sd-dottext.is-done .sd-dottext__stroke { opacity: 0; transition: opacity 400ms; }
+@keyframes sd-float { from { translate: 0 0; } to { translate: var(--fx, 0px) var(--fy, -16px); } }
+.sd-qcard, .sd-float { animation: sd-float var(--fd, 9s) ease-in-out var(--fdl, 0s) infinite alternate; }
+.sd-name { font-size: 132px; font-weight: 540; letter-spacing: -.035em; line-height: 1.1; }
+.sd-name .sd-dottext__fill, .sd-name.grad-fill .sd-dottext__fill { background: linear-gradient(92deg, #b9a4ff 0%, #9466ff 55%, #8a6dff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* ---------- feature nav (scroll-spy list) ---------- */
+.sd-nav { display: flex; flex-direction: column; gap: 30px; }
+.sd-nav__item { display: flex; align-items: center; gap: 18px; font-size: 34px; font-weight: 520; letter-spacing: -.015em;
+  color: rgba(243,243,241,.2); transition: color 250ms var(--sd-ease-out) 170ms; }
+.sd-nav__item > i { width: 34px; height: 34px; display: grid; place-items: center; font-style: normal; color: rgba(243,243,241,.2);
+  transition: color 250ms var(--sd-ease-out) 170ms; }
+.sd-nav__item small { display: block; font-size: 22px; color: var(--sd-ink-3); font-weight: 450; margin-top: 4px; }
+.sd-nav__item.is-focus { color: var(--sd-ink); transition-delay: 0s; transition-duration: 150ms; }
+.sd-nav__item.is-focus > i { color: var(--c, var(--sd-blue)); transition-delay: 0s; transition-duration: 150ms; }
+.sd-nav__item small { transition: opacity 250ms; }
+.sd-nav__item:not(.is-focus) small { opacity: .5; }
+
+/* focus groups: siblings dim while one is focused */
+[data-focus-group] > [data-focus] { transition: opacity 250ms var(--sd-ease-out) 170ms, filter 250ms var(--sd-ease-out) 170ms; }
+[data-focus-group] > [data-focus].is-focus { transition-delay: 0s; transition-duration: 150ms; }
+[data-focus-group].has-focus > [data-focus]:not(.is-focus) { opacity: .2; filter: saturate(0); }
+
+/* ---------- checklist card ---------- */
+.sd-checklist { list-style: none; display: flex; flex-direction: column; gap: 18px; padding: 40px 46px; }
+.sd-checklist li { display: flex; align-items: center; gap: 18px; font-size: 30px; font-weight: 480; color: var(--sd-panel-ink); }
+.sd-checklist li::before { content: ""; width: 30px; height: 30px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 2px rgba(0,0,0,.18);
+  transition: background-color 300ms, box-shadow 300ms, transform 600ms var(--sd-ease-chewy); }
+.sd-checklist li.is-done::before { background: var(--sd-green) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M6.5 12.5l3.5 3.5 7.5-8' fill='none' stroke='%23111' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/72% no-repeat; box-shadow: none; transform: scale(1.12); }
+.sd-checklist li.is-done { color: rgba(18,18,20,.55); }
+.sd-checklist li:nth-child(1)::before { transition-delay: 0ms; }
+.sd-checklist li:nth-child(2)::before { transition-delay: 140ms; }
+.sd-checklist li:nth-child(3)::before { transition-delay: 280ms; }
+.sd-checklist li:nth-child(4)::before { transition-delay: 420ms; }
+.sd-checklist li:nth-child(5)::before { transition-delay: 560ms; }
+.sd-checklist li:nth-child(6)::before { transition-delay: 700ms; }
+.sd-checklist li:nth-child(7)::before { transition-delay: 840ms; }
+.sd-checklist li:nth-child(8)::before { transition-delay: 980ms; }
+
+/* ---------- table ---------- */
+.sd-table { border-collapse: collapse; font-size: 32px; font-variant-numeric: tabular-nums; }
+.sd-table th { font-size: 26px; font-weight: 560; color: var(--sd-ink); text-align: left; padding: 0 56px 24px 0; vertical-align: bottom; line-height: 1.2; }
+.sd-table td { padding: 22px 56px 22px 0; border-top: 1px solid var(--sd-line); color: var(--sd-ink-2); }
+.sd-table td:first-child { color: var(--sd-ink-3); }
+.sd-table .is-best { color: var(--sd-ink); font-weight: 560; }
+
+/* ---------- chart (SVG built by JS) ---------- */
+.sd-chart { position: relative; width: 100%; height: 100%; min-height: 360px; }
+.sd-chart svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.sd-chart text { font-family: var(--sd-font); fill: var(--sd-ink-3); font-size: 22px; }
+.sd-chart .val { fill: var(--sd-ink); font-size: 30px; font-weight: 560; }
+.sd-chart .grid { stroke: var(--sd-line); stroke-width: 1; }
+
+/* ---------- ladder (tiers) ---------- */
+.sd-ladder { display: flex; align-items: flex-end; gap: 28px; height: 100%; }
+.sd-ladder__step { flex: 1; border-radius: 24px 24px 6px 6px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px var(--sd-line);
+  display: flex; flex-direction: column; justify-content: flex-start; padding: 34px; gap: 10px; }
+.sd-ladder__step b { font-size: 64px; font-weight: 580; letter-spacing: -.03em; }
+.sd-ladder__step span { font-size: 24px; color: var(--sd-ink-3); }
+.sd-ladder__step.is-top { background: linear-gradient(180deg, rgba(157,118,255,.32), rgba(74,131,255,.08)); box-shadow: inset 0 0 0 1px rgba(170,140,255,.45); }
+
+/* ---------- logos ---------- */
+.sd-logos { display: grid; grid-template-columns: repeat(var(--cols, 4), 1fr); gap: 56px 70px; align-items: center; justify-items: center; }
+.sd-logo { font-size: 40px; font-weight: 640; letter-spacing: -.02em; color: var(--sd-ink); opacity: .9; display: flex; align-items: center; gap: 12px; }
+.sd-logo img { height: 52px; width: auto; filter: brightness(0) invert(1); opacity: .9; }
+
+/* ---------- lockup (icon + product name), dockable ---------- */
+.sd-lockup { display: inline-flex; align-items: center; gap: 30px; transition: transform var(--sd-dur-chewy) var(--sd-ease-chewy); }
+.sd-lockup .t-display { line-height: .98; }
+
+/* ---------- agenda columns ---------- */
+.sd-agenda { display: grid; grid-template-columns: repeat(var(--cols, 4), 1fr); gap: 56px; }
+.sd-agenda h4 { font-size: 26px; font-weight: 620; color: var(--c, var(--sd-blue)); margin-bottom: 26px; letter-spacing: 0; }
+.sd-agenda li { list-style: none; font-size: 27px; line-height: 1.3; font-weight: 470; color: var(--sd-ink-2); padding: 14px 0; border-top: 1px solid var(--sd-line); }
+
+/* ---------- collage (floating images around a headline) ---------- */
+.sd-float { position: absolute; border-radius: 18px; overflow: hidden; box-shadow: 0 30px 90px -30px rgba(0,0,0,.8), 0 0 0 1px var(--sd-line); background: #2a2b2f; }
+.sd-float > img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ---------- quote ---------- */
+.sd-quote { font-size: 72px; line-height: 1.22; font-weight: 520; letter-spacing: -.028em; text-wrap: balance; }
+.sd-quote .hl { color: var(--sd-blue); }
+.sd-cite { font-size: 28px; color: var(--sd-ink-3); font-weight: 480; }
+
+/* ---------- partner lockup ---------- */
+.sd-partner { display: flex; align-items: center; gap: 56px; font-size: 84px; font-weight: 600; letter-spacing: -.03em; }
+.sd-partner > hr { width: 2px; height: 110px; border: 0; background: var(--sd-ink-3); }
+
+/* ---------- kinetic word ---------- */
+.sd-kinetic { font-size: 300px; font-weight: 600; letter-spacing: -.05em; line-height: 1; white-space: nowrap; }
+
+/* ---------- chrome: progress + help ---------- */
+.sd-progress { position: fixed; left: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.35); width: 0; z-index: 10; transition: width 500ms var(--sd-ease-out); opacity: 0; }
+body.show-chrome .sd-progress { opacity: 1; }
+.sd-counter { position: fixed; right: 18px; bottom: 12px; font: 500 13px/1 var(--sd-font); color: rgba(255,255,255,.4); z-index: 10; opacity: 0; transition: opacity 300ms; }
+body.show-chrome .sd-counter { opacity: 1; }
+
+/* ---------- overview grid (press O) ---------- */
+body.is-overview .sd-viewport { overflow: auto; }
+body.is-overview .sd-stage { position: relative; left: 0; top: 0; margin: 0; display: grid; grid-template-columns: repeat(4, 1920px); gap: 80px; width: auto; height: auto; padding: 80px; background: #0a0a0b; }
+body.is-overview .sd-bg { display: none; }
+body.is-overview .deck { position: static; display: contents; }
+body.is-overview .slide { position: relative; visibility: visible; width: 1920px; height: 1080px; background: var(--sd-bg); outline: 1px solid #333; cursor: pointer; pointer-events: auto; overflow: hidden; }
+body.is-overview .slide [data-anim], body.is-overview .slide [data-step] { opacity: 1 !important; }
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .sd-bg__grain { animation: none; }
+  .sd-orb { animation: none; }
+}
+
+/* ---------- print: one slide per page, final state ---------- */
+@media print {
+  @page { size: 1920px 1080px; margin: 0; }
+  html, body { overflow: visible; height: auto; background: var(--sd-bg); }
+  .sd-viewport { position: static; display: block; }
+  .sd-stage { transform: none !important; width: 1920px; height: auto; overflow: visible; background: none; }
+  .sd-bg, .sd-progress, .sd-counter { display: none; }
+  .deck { position: static; }
+  .slide { position: relative; visibility: visible; width: 1920px; height: 1080px; break-after: page; background: var(--sd-bg); overflow: hidden;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slide.on-white { background: var(--sd-panel); }
+  .slide [data-anim], .slide [data-step] { opacity: 1 !important; transform: none !important; filter: none !important; }
+  .slide [data-until] { display: none !important; }
+  .sd-carousel > :not(:last-child), .sd-cloud > [data-set]:not(:last-of-type) { display: none !important; }
+  .sd-carousel > :last-child { transform: none !important; opacity: 1 !important; filter: none !important; }
+  .sd-qcard, .sd-cloud__label { opacity: 1 !important; }
+  .sd-race__bar i { transform: none !important; }
+  canvas.sd-assemble { display: none; }
+  .sd-dottext__stroke, [data-anim="roll"][data-to-x], [data-anim="roll"][data-to-y] { display: none !important; }
+  .grad, .grad-warm, .grad-cool, .sheen, .sd-dottext__fill { background: none !important; -webkit-background-clip: border-box !important; background-clip: border-box !important; -webkit-text-fill-color: currentColor; }
+  .grad, .sd-name .sd-dottext__fill { color: #a989ff !important; }
+  .grad-warm { color: var(--sd-orange) !important; } .grad-cool { color: var(--sd-blue) !important; } .sheen { color: #fff !important; }
+  .sd-dottext { --sd-ps: 130% !important; --sd-pf: 130% !important; }
+  .sd-dottext canvas { display: none; }
+}
+
+/* ---------- carousel (step-driven card stack) ---------- */
+.sd-carousel { position: relative; display: grid; place-items: center; }
+.sd-carousel > * { grid-area: 1 / 1; transition: transform var(--sd-dur-chewy) var(--sd-ease-chewy), opacity 450ms var(--sd-ease-out), filter 450ms var(--sd-ease-out); }
+.sd-carousel > .is-cur { transform: none; opacity: 1; filter: none; z-index: 2; }
+.sd-carousel > .is-prev { transform: translateX(calc(-100% - var(--gap, 40px))) scale(.96); filter: grayscale(1) brightness(.5) blur(1px); z-index: 1; }
+.sd-carousel > .is-next { transform: translateX(calc(100% + var(--gap, 40px))) scale(.96); opacity: 0; filter: blur(8px); }
+.sd-carousel > .is-far { transform: translateX(calc(-200% - var(--gap, 40px) * 2)) scale(.92); opacity: 0; }
+
+/* ---------- sheen wordmark ---------- */
+.sheen { background: linear-gradient(100deg, #fff 0%, #fff 40%, #ece3ff 47%, #c3d2ff 51%, #ffe6f6 55%, #fff 62%, #fff 100%);
+  background-size: 260% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: sd-sheen 10s cubic-bezier(.45,0,.2,1) infinite; }
+@keyframes sd-sheen { 0% { background-position: 130% 0; } 60%, 100% { background-position: -30% 0; } }
+
+/* ---------- particle assemble ---------- */
+canvas.sd-assemble { position: absolute; pointer-events: none; z-index: 2; }
+.sd-assemble__text { display: inline-block; }
+
+
+/* ---------- step helpers ---------- */
+.sd-ready .slide [data-step][data-collapse]:not(.is-in) { display: none !important; }
+[data-until] { transition: opacity 380ms var(--sd-ease-out), filter 380ms var(--sd-ease-out); }
+[data-until].is-gone { opacity: 0 !important; filter: blur(10px) saturate(0); pointer-events: none; }
+[data-until][data-collapse].is-gone { display: none !important; }
+
+/* ---------- race compare cards ---------- */
+.sd-race { display: flex; flex-direction: column; gap: 18px; padding: 22px; transition: box-shadow 500ms var(--sd-ease-out); }
+.sd-race__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sd-race__time { font: 600 24px/1 var(--sd-mono); color: rgba(0,0,0,.45); font-variant-numeric: tabular-nums; }
+.sd-race__media { aspect-ratio: 4 / 3; border-radius: 18px; overflow: hidden; background: #e9e9e5; display: grid; place-items: center; }
+.sd-race__media > img { width: 100%; height: 100%; object-fit: cover; }
+.sd-race__bar { height: 6px; border-radius: 6px; background: rgba(0,0,0,.08); overflow: hidden; }
+.sd-race__bar i { display: block; height: 100%; background: var(--c, var(--sd-blue)); transform-origin: 0 50%; transform: scaleX(0); }
+.sd-race.is-done { box-shadow: 0 0 0 3px var(--c, var(--sd-blue)), 0 40px 120px -30px rgba(0,0,0,.6); }
+.sd-race.is-done .sd-race__time { color: var(--c, var(--sd-blue)); }
+
+/* ---------- tier ladder (typographic staircase) ---------- */
+.sd-tiers { display: flex; align-items: flex-end; gap: 90px; }
+.sd-tiers__num { font-size: 104px; font-weight: 560; letter-spacing: -.04em; line-height: 1; color: var(--sd-ink-2); }
+.sd-tiers__main .sd-tiers__num { color: var(--sd-ink); font-size: 132px; }
+.sd-tiers__main ul { list-style: none; margin-top: 26px; display: flex; flex-direction: column; gap: 12px; }
+.sd-tiers__main li { font-size: 30px; color: var(--sd-ink-2); }
+
+/* ---------- recap / dense bento helpers ---------- */
+.sd-tile .t-h3 { position: relative; }
+.sd-tile.is-accent { background: linear-gradient(160deg, color-mix(in srgb, var(--c, var(--sd-blue)) 38%, #1d1e21), #1d1e21 70%); }
+
+
+/* ======================= patterns from 2:30–17:00 ======================= */
+.sd-dip { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+
+/* glowing wordmark: white letters with soft colored edge glow + color fringe */
+.t-glowmark { color: #fff; text-shadow: -1.5px 0 rgba(255,90,170,.55), 1.5px 0 rgba(90,190,255,.55), 0 0 22px rgba(170,140,255,.45), 0 0 60px rgba(120,160,255,.25); }
+.sd-char { display: inline-block; will-change: opacity, filter; }
+.sd-bokeh { position: absolute; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 2;
+  background: radial-gradient(circle, #fff 0%, rgba(255,255,255,.85) 35%, rgba(255,255,255,0) 70%); filter: blur(10px); }
+.sd-bokeh i { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; border-radius: 50%; opacity: 0; background: #ff7ac6; filter: blur(1px); }
+.sd-bokeh i + i { background: #a98bff; width: 6px; height: 6px; }
+
+/* phone device frame (≈450×976 on the canvas) */
+.sd-phone { position: relative; width: 450px; height: 976px; flex: none; border-radius: 68px; overflow: hidden;
+  background: #f2f2f2; color: #111; box-shadow: 0 0 0 9px #d6d6da, 0 0 0 10px rgba(0,0,0,.4), 0 70px 160px -40px rgba(0,0,0,.85);
+  display: flex; flex-direction: column; font-size: 22px; }
+.sd-phone.is-dark { background: #111214; color: #f3f3f1; box-shadow: 0 0 0 9px #3a3b40, 0 70px 160px -40px rgba(0,0,0,.9); }
+.sd-phone__status { height: 58px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 40px 0; font-weight: 640; font-size: 20px; }
+.sd-phone__head { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 4px 0 16px; font-size: 18px; color: rgba(0,0,0,.55); border-bottom: 1px solid rgba(0,0,0,.06); }
+.sd-phone__head .sd-dot { --size: 56px; }
+.sd-phone__body { flex: 1; min-height: 0; position: relative; }
+.sd-phone__body > img { width: 100%; height: 100%; object-fit: cover; }
+
+/* chat thread (inside a phone or a window); children are revealed by data-anim="chat" */
+.sd-chat { display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; overflow: hidden; height: 100%; padding: 22px 22px 30px;
+  -webkit-mask-image: linear-gradient(transparent 0, #000 14%); mask-image: linear-gradient(transparent 0, #000 14%); }
+.sd-chat > * { display: none; }
+.sd-chat > .is-shown { display: block; }
+.sd-msg { max-width: 80%; padding: 14px 20px; border-radius: 26px; font-size: 22px; line-height: 1.36; align-self: flex-start; background: #fff; color: #111; box-shadow: 0 1px 0 rgba(0,0,0,.04); }
+.sd-msg.is-me { align-self: flex-end; background: var(--c, var(--sd-blue)); color: #fff; }
+.sd-msg.is-note { align-self: flex-end; background: none; box-shadow: none; padding: 0 8px; font-size: 16px; color: rgba(0,0,0,.4); }
+.sd-msg.is-plain { background: none; box-shadow: none; padding: 4px 4px; max-width: 92%; }
+.sd-chat.is-dark .sd-msg { background: #2a2b2f; color: #f3f3f1; } .sd-chat.is-dark .sd-msg.is-me { background: var(--c, var(--sd-blue)); }
+.sd-chat > .sd-msg.is-typing.is-shown { display: flex; gap: 7px; padding: 18px 20px; }
+.sd-msg.is-typing i { width: 10px; height: 10px; border-radius: 50%; background: rgba(0,0,0,.35); animation: sd-typing 1.1s ease-in-out infinite; }
+.sd-msg.is-typing i:nth-child(2) { animation-delay: .15s; } .sd-msg.is-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes sd-typing { 0%, 60%, 100% { opacity: .35; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-4px); } }
+
+/* satellite cards / app tiles placed around a device */
+.sd-sat { position: absolute; display: flex; align-items: center; gap: 16px; padding: 18px 24px; border-radius: 24px; background: #fff; color: #111;
+  font-size: 22px; font-weight: 560; box-shadow: 0 30px 80px -24px rgba(0,0,0,.6); z-index: 3; }
+.sd-sat small { display: block; font-size: 17px; font-weight: 450; color: rgba(0,0,0,.45); }
+.sd-sat.is-tile { width: 132px; height: 132px; padding: 0; justify-content: center; border-radius: 32px; font-size: 54px; }
+.sd-sat.is-ghost { background: rgba(255,255,255,.12); box-shadow: none; }
+
+/* in-frame swap: frame stays, only content crossfades (250ms) — use data-focus on children */
+.sd-swap { display: grid; position: relative; }
+.sd-swap > * { grid-area: 1 / 1; opacity: 0; filter: brightness(.85); transition: opacity 250ms var(--sd-ease-out), filter 250ms var(--sd-ease-out) !important; }
+.sd-swap:not(.has-focus) > :first-child, .sd-swap.has-focus > .is-focus { opacity: 1 !important; filter: none !important; }
+.sd-swap.has-focus > :not(.is-focus) { opacity: 0 !important; }
+
+/* camera layer inside a frame (data-cam="0:50% 50% 1 | 1:30% 20% 2.2") */
+.sd-cam { width: 100%; height: 100%; will-change: transform; }
+
+/* live demo frame. LED variant (default): window left of center on black. */
+.slide.sd-demo { padding: 0; }
+.sd-demo__window { position: absolute; left: 12%; top: 5%; width: 63%; height: 90%; border-radius: 22px; overflow: hidden; background: #1e1e1e;
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,.16); }
+.sd-demo__window > img, .sd-demo__window > video { width: 100%; height: 100%; object-fit: cover; }
+.sd-pip { position: absolute; display: none; left: 36px; top: 644px; width: 378px; height: 378px; border-radius: 20px; overflow: hidden; background: #2a2b2f; z-index: 2; }
+.sd-pip > img, .sd-pip > video { width: 100%; height: 100%; object-fit: cover; }
+.sd-demo .sd-phone { position: absolute; display: none; }
+/* program variant: 16:9 window + square PIP overlapping its lower-left */
+.sd-demo.is-program .sd-demo__window { left: 372px; top: 67px; width: 1505px; height: 845px; }
+.sd-demo.is-program .sd-pip { display: block; }
+/* camera + phone */
+.sd-demo.is-cam-phone .sd-demo__window { left: 57px; top: 177px; width: 1296px; height: 729px; border-radius: 15px; }
+.sd-demo.is-cam-phone .sd-phone { display: flex; left: 1410px; top: 48px; height: 984px; }
+
+/* app icon character card (vertical icon + name on a faint pill) */
+.sd-appicon { display: flex; flex-direction: column; align-items: center; gap: 30px; }
+.sd-appicon__icon { width: 280px; height: 280px; border-radius: 30%; display: grid; place-items: center; font-size: 120px; color: #111;
+  background: radial-gradient(circle at 35% 28%, #ffffff55, transparent 45%), var(--c, var(--sd-green)); box-shadow: inset 0 -16px 40px rgba(0,0,0,.18), 0 40px 100px -30px var(--c, var(--sd-green)); }
+.sd-appicon__name { padding: 10px 28px; border-radius: 999px; background: rgba(255,255,255,.05); font-size: 34px; font-weight: 540; color: var(--sd-ink-2); }
+
+/* app icon + integration grid */
+.sd-applockup { display: flex; align-items: center; gap: 110px; }
+.sd-applockup__grid { display: grid; grid-template-columns: repeat(4, auto); gap: 44px 70px; }
+.sd-applockup__grid figure { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.sd-applockup__grid figure > i { font-style: normal; font-size: 52px; line-height: 1; width: 72px; height: 72px; display: grid; place-items: center; color: var(--sd-ink); }
+.sd-applockup__grid figcaption { font-size: 21px; color: var(--sd-ink-2); }
+
+/* 3D collage fly-through: cards drift with parallax, slow dolly; title stays outside the box */
+.sd-flythrough { position: absolute; inset: 0; transform-origin: 60% 50%; }
+.sd-flythrough > * { position: absolute; border-radius: 18px; overflow: hidden; background: #2a2b2f; box-shadow: 0 30px 90px -30px rgba(0,0,0,.8), 0 0 0 1px var(--sd-line); }
+.sd-flythrough > * > img { width: 100%; height: 100%; object-fit: cover; }
+.sd-nametag { position: absolute; left: 14px; bottom: 14px; padding: 6px 14px; border-radius: 999px; font-size: 18px; font-weight: 600; color: #111; background: var(--c, var(--sd-yellow)); }
+
+/* agent status pill with shimmering second line */
+.sd-agentpill { display: inline-flex; align-items: center; gap: 18px; padding: 16px 26px; border-radius: 22px; background: #fff; color: #111; font-size: 24px; box-shadow: 0 20px 60px -20px rgba(0,0,0,.6); }
+.sd-agentpill b { font-weight: 600; }
+.sd-shimmer { background: linear-gradient(90deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.35) 40%, rgba(0,0,0,.85) 50%, rgba(0,0,0,.35) 60%, rgba(0,0,0,.35) 100%);
+  background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: sd-shimmer 1.8s linear infinite; }
+@keyframes sd-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+/* living corner bug (optional, broadcast-style) */
+.sd-bug { position: absolute; left: 44px; bottom: 34px; z-index: 20; display: flex; align-items: center; gap: 10px; height: 34px;
+  font-size: 22px; font-weight: 560; color: rgba(255,255,255,.75); pointer-events: none; }
+.sd-bug__mark { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 4px rgba(255,255,255,.8); transition: transform 280ms var(--sd-ease-out), opacity 200ms; }
+.sd-bug__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--sd-violet); display: none; }
+.sd-bug.is-morph .sd-bug__mark { transform: rotate(30deg) scale(.4); opacity: 0; }
+.sd-bug.is-dot .sd-bug__mark, .sd-bug.is-unmorph .sd-bug__mark { display: none; }
+.sd-bug.is-dot .sd-bug__dot { display: block; }
+.sd-bug.is-unmorph .sd-bug__dot { display: none; }
+.sd-bug.is-mark .sd-bug__mark { animation: sd-unfurl 270ms var(--sd-ease-out); }
+@keyframes sd-unfurl { from { transform: rotate(-30deg) scale(.4); opacity: 0; } }
+@media print { .sd-bug, .sd-dip, .sd-bokeh { display: none !important; } .sd-chat > * { display: block !important; } .sd-chat > .is-typing { display: none !important; } }
+
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- 1. INTRO — giant dot face zooms out to a small character -->
+  <section class="slide l-center" data-bg="black" data-transition="cut">
+    <div class="sd-dot" data-color="green" data-face="o o" data-anim="zoomout" style="--size:120px"></div>
+  </section>
+
+  <!-- 2. SPEAKER — dot-matrix name resolve -->
+  <section class="slide l-center">
+    <h1 class="sd-name" data-anim="dots">Jiwoo Han</h1>
+  </section>
+
+  <!-- 3. STATS BENTO — whole grid fades in fast, tiles keep living -->
+  <section class="slide" style="padding:90px 110px">
+    <div class="sd-bento" style="grid-template-rows:repeat(3,1fr)" data-anim-children="blur" data-stagger="24">
+      <div class="sd-tile c-4 is-clear" style="justify-content:center">
+        <div class="sd-stat is-inline" data-color="cyan"><span class="sd-stat__num" data-anim="count">8억</span><span class="sd-stat__label">주간 사용자</span></div>
+      </div>
+      <div class="sd-tile c-2" style="background:#2c8a4e"><span class="sd-tile__label" style="color:#fff">Studio</span></div>
+      <div class="sd-tile c-3 is-clear" style="justify-content:center">
+        <div class="sd-stat is-inline" data-color="orange"><span class="sd-stat__num" data-anim="count">40+</span><span class="sd-stat__label">모델 출시</span></div>
+      </div>
+      <div class="sd-tile c-3 r-2" style="background:#0f1013"><canvas class="sd-spiral"></canvas><span class="sd-tile__label" style="color:#fff">Pulse 6 · Nova</span></div>
+      <div class="sd-tile c-2 sd-placeholder">이미지</div>
+      <div class="sd-tile c-2 is-center"><span class="sd-dot" data-color="violet" data-face="^ ^" style="--size:90px"></span></div>
+      <div class="sd-tile c-2 is-light"><span class="t-caption" style="color:#555">Pulse 6 · Nova High</span><div class="sd-typing" style="font-size:22px;margin-top:8px;color:#111">Ask anything</div></div>
+      <div class="sd-tile c-3 sd-placeholder">영상</div>
+      <div class="sd-tile c-3 is-light"><span class="t-caption" style="color:#555">주간 리포트</span><b style="font-size:30px;color:#111">팀 업데이트 정리</b></div>
+      <div class="sd-tile c-5 is-clear" style="justify-content:center">
+        <div class="sd-stat is-inline" data-color="violet"><span class="sd-stat__num" data-anim="count">2.5M</span><span class="sd-stat__label">비즈니스 사용자</span></div>
+      </div>
+      <div class="sd-tile c-4 is-center" style="background:#0f1013"><div class="sd-orb" style="width:34%"></div></div>
+    </div>
+  </section>
+
+  <!-- 4. QUOTE CLOUD — depth-of-field cards, sets change with →  -->
+  <section class="slide" data-bg="stars">
+    <div class="sd-cloud">
+      <div data-set="1">
+        <span class="sd-pill sd-cloud__label">리눅스 앱 출시</span>
+        <div class="sd-qcard" data-z="0" style="left:700px;top:150px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#ffb86b">S</div><div><div class="sd-qcard__name">silverline</div><div class="sd-qcard__handle">@silver_line</div></div></div><div class="sd-qcard__text">리눅스 앱 제발 만들어 주세요!!!</div></div>
+        <div class="sd-qcard" data-z="0" style="left:180px;top:380px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#8fd3ff">E</div><div><div class="sd-qcard__name">eustache</div><div class="sd-qcard__handle">@eustache</div></div></div><div class="sd-qcard__text">맥을 살까 고민 중이었는데, 사실 리눅스가 더 좋아요. 리눅스 버전만 나오면 바로 갈아탈게요.</div></div>
+        <div class="sd-qcard" data-z="0" style="left:1060px;top:420px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#b9a4ff">C</div><div><div class="sd-qcard__name">codemeow</div><div class="sd-qcard__handle">@codemeow</div></div></div><div class="sd-qcard__text">아직도 리눅스 앱 기다리는 중.</div></div>
+        <div class="sd-qcard" data-z="2" style="left:1300px;top:120px"><div class="sd-qcard__text">여러 폴더를 한 번에 열 수 있으면 좋겠어요.</div></div>
+        <div class="sd-qcard" data-z="1" style="left:620px;top:700px"><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#7ee2a8">J</div><div><div class="sd-qcard__name">Joel H.</div><div class="sd-qcard__handle">@joelh</div></div></div><div class="sd-qcard__text">리눅스용 앱, 부탁드립니다!</div></div>
+        <div class="sd-qcard" data-z="3" style="left:80px;top:90px"><div class="sd-qcard__text">모바일에서도 원격으로 쓸 수 있나요?</div></div>
+      </div>
+      <div data-set="2">
+        <span class="sd-pill sd-cloud__label">여러 폴더 지원</span>
+        <div class="sd-qcard" data-z="0" style="left:1080px;top:170px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#ffd341">S</div><div><div class="sd-qcard__name">sunny</div><div class="sd-qcard__handle">@sunny.dev</div></div></div><div class="sd-qcard__text">한 프로젝트에 폴더를 여러 개 붙일 수 있게 해 주세요. 지금은 하나만 돼서 불편해요.</div></div>
+        <div class="sd-qcard" data-z="0" style="left:220px;top:330px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#ff8a8a">D</div><div><div class="sd-qcard__name">daybreak</div><div class="sd-qcard__handle">@daybreak</div></div></div><div class="sd-qcard__text">현재 프로젝트는 폴더 하나만 담을 수 있어요. 멀티 폴더 지원이 필요합니다.</div></div>
+        <div class="sd-qcard" data-z="0" style="left:760px;top:610px"><div class="sd-qcard__check"></div><div class="sd-qcard__who"><div class="sd-qcard__avatar" style="--c:#8fd3ff">O</div><div><div class="sd-qcard__name">Obinna O.</div><div class="sd-qcard__handle">@obinna</div></div></div><div class="sd-qcard__text">작업 공간 밖의 파일도 컨텍스트로 넣고 싶어요.</div></div>
+        <div class="sd-qcard" data-z="2" style="left:120px;top:720px"><div class="sd-qcard__text">설정을 팀이랑 공유하고 싶어요.</div></div>
+        <div class="sd-qcard" data-z="3" style="left:1380px;top:640px"><div class="sd-qcard__text">세션 이어서 하기 기능 최고.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. SECTION TITLE — two lines, second in gradient -->
+  <section class="slide l-center">
+    <h2 class="t-display" data-anim="typein"><span>사람과 AI,</span><span class="grad">함께 일하는 방식</span></h2>
+  </section>
+
+  <!-- 6. DOT PARADE — giant characters roll across with motion smear, three land on the edges -->
+  <section class="slide" style="justify-content:center">
+    <h2 class="t-display" data-anim="mask" data-delay="1500" style="position:relative;z-index:3"><span>모두를 위해</span><span class="hl">만듭니다</span></h2>
+    <div class="sd-dot" data-color="green" data-face="+ +" data-anim="roll" data-from-x="-1700" data-from-y="420" data-to-x="2200" data-to-y="-300" data-duration="620" style="--size:480px;position:absolute;left:700px;top:300px"></div>
+    <div class="sd-dot" data-color="orange" data-face="* *" data-anim="roll" data-from-x="-1500" data-from-y="500" data-to-x="2400" data-to-y="100" data-duration="560" data-delay="220" style="--size:420px;position:absolute;left:700px;top:500px"></div>
+    <div class="sd-dot" data-color="violet" data-face="o &lt;" data-anim="roll" data-from-x="-2100" data-from-y="-150" data-delay="420" style="--size:600px;position:absolute;left:1380px;top:-190px"></div>
+    <div class="sd-dot" data-face="^ ^" data-anim="roll" data-from-x="-1900" data-from-y="250" data-delay="640" style="--size:440px;--c:#2b2c30;color:#f3f3f1;position:absolute;left:1020px;top:700px"></div>
+    <div class="sd-dot" data-color="white" data-face="n n" data-anim="roll" data-from-x="-2300" data-from-y="120" data-delay="820" style="--size:540px;position:absolute;left:1540px;top:610px"></div>
+  </section>
+
+  <!-- 7. PARTICLE LOGO — multicolor particles swirl in and assemble the mark -->
+  <section class="slide l-center" data-bg="stars">
+    <div data-anim="assemble" style="width:420px;height:420px">
+      <svg viewBox="0 0 200 200" width="420" height="420" fill="none" stroke="#f3f3f1" stroke-width="16">
+        <circle cx="100" cy="100" r="62"/><circle cx="100" cy="100" r="24" fill="#f3f3f1" stroke="none"/><circle cx="158" cy="42" r="16" fill="#f3f3f1" stroke="none"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 8. CHECKLIST CAROUSEL — items grow the card; → swaps to the next card -->
+  <section class="slide l-center" data-bg="stars">
+    <div class="sd-carousel" style="--gap:56px">
+      <div class="sd-card" style="width:640px" data-anim="blur">
+        <ul class="sd-checklist" data-anim-children="grow" data-stagger="380" data-delay="500">
+          <li>레스토랑 예약하기</li><li>저녁 장보기</li><li>캘린더 확인</li><li>병원 예약 잡기</li><li>이메일 찾기</li>
+        </ul>
+      </div>
+      <div class="sd-card" style="width:640px">
+        <ul class="sd-checklist">
+          <li data-done="1">신제품 QA</li><li data-done="1">웹사이트 디자인</li><li data-done="1">팀 워크숍 기획</li><li>포트폴리오 리밸런싱</li><li>이메일 캠페인 만들기</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. WORDMARK with sheen + character row -->
+  <section class="slide l-center" data-bg="top">
+    <div class="t-hero sheen" data-anim="zoom">Orbit</div>
+    <div class="sd-dots-row mt-l" data-anim-children="pop" data-stagger="70" data-delay="350">
+      <span class="sd-dot" data-color="cyan" data-face="^ ^"></span>
+      <span class="sd-dot" data-color="green" data-face="o o"></span>
+      <span class="sd-dot" data-color="yellow" data-face="- -"></span>
+      <span class="sd-dot" data-color="orange" data-face="&gt; &lt;"></span>
+      <span class="sd-dot" data-color="violet" data-face="* *"></span>
+    </div>
+  </section>
+
+  <!-- 10. TITLE → CHIPS (FLIP): title starts centered, moves up as chips arrive -->
+  <section class="slide l-center">
+    <h2 class="t-title" data-anim="glow" data-flip>전문 <span class="grad">에이전트</span></h2>
+    <div class="row wrap center gap-l mt-l" data-step="1" data-collapse style="max-width:1300px;row-gap:40px" data-anim-children="rise" data-stagger="160">
+      <span class="sd-chip" data-color="orange"><i>₩</i>회계</span>
+      <span class="sd-chip" data-color="green"><i>✉</i>이메일 마케팅</span>
+      <span class="sd-chip" data-color="red"><i>§</i>법무 검토</span>
+      <span class="sd-chip" data-color="cyan"><i>✓</i>티켓 처리</span>
+      <span class="sd-chip" data-color="white"><i>…</i>그리고 더</span>
+    </div>
+  </section>
+
+  <!-- 11. PLAN PILLS -->
+  <section class="slide l-center">
+    <h2 class="t-title" data-anim="rise"><span class="grad">에이전트</span>, 이제 팀 공간에서</h2>
+    <div class="row center gap-m mt-l" data-anim-children="rise" data-stagger="90" data-delay="250">
+      <span class="sd-pill">Pro</span><span class="sd-pill">Business Premium</span><span class="sd-pill">Enterprise</span>
+    </div>
+  </section>
+
+  <!-- 12. THREE PILLARS with focus steps -->
+  <section class="slide l-center" data-bg="stars">
+    <p class="t-h3" data-anim="rise" style="color:var(--sd-ink-2)">모두를 위한 플랫폼</p>
+    <div class="row center gap-xl mt-l" data-focus-group data-anim-children="pop" data-stagger="110" data-delay="200">
+      <span class="sd-chip" data-color="blue" data-focus="1" style="font-size:52px"><i style="width:72px;height:72px">◎</i>모델</span>
+      <span class="sd-chip" data-color="orange" data-focus="2" style="font-size:52px"><i style="width:72px;height:72px">⌘</i>빌드</span>
+      <span class="sd-chip" data-color="green" data-focus="3" style="font-size:52px"><i style="width:72px;height:72px">⊕</i>배포</span>
+    </div>
+  </section>
+
+  <!-- 13. HERO WORD on starfield with sun glow -->
+  <section class="slide l-center" data-bg="stars glow-left">
+    <h1 class="t-hero" data-anim="zoom">Ultrafast</h1>
+    <p class="t-lead mt-m" data-anim="rise" data-delay="250">API · 앱 · CLI 어디서나</p>
+    <p class="t-caption mt-s" data-anim="rise" data-delay="350">최대 8배 빠른 생성 — 초당 300 토큰</p>
+  </section>
+
+  <!-- 14. RACE COMPARE -->
+  <section class="slide" style="justify-content:center">
+    <div class="l-split" style="grid-template-columns:.7fr 1fr 1fr;column-gap:56px">
+      <div class="stack gap-s" data-anim="rise"><p class="t-caption">프롬프트</p><p class="t-h3" style="font-size:40px">흰색 로켓을 큰 창문과 함께 브랜드 컬러로 만들어 줘</p></div>
+      <div class="sd-card sd-race" data-anim="race" data-time="1600" data-color="blue">
+        <div class="sd-race__head"><span class="sd-tag is-accent" data-color="blue" style="--c:var(--sd-blue)">Ultrafast</span><span class="sd-race__time">0.0s</span></div>
+        <div class="sd-race__media"><span style="font-size:120px">🚀</span></div>
+        <div class="sd-race__bar"><i></i></div>
+      </div>
+      <div class="sd-card sd-race" data-anim="race" data-time="7000" data-delay="80" style="--c:#8a8a90">
+        <div class="sd-race__head"><span class="sd-tag">Regular</span><span class="sd-race__time">0.0s</span></div>
+        <div class="sd-race__media"><span style="font-size:120px">🚀</span></div>
+        <div class="sd-race__bar"><i></i></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15. TIER LADDER (FLIP): main tier slides right as lower tiers appear -->
+  <section class="slide l-center">
+    <div class="sd-tiers">
+      <div class="sd-tiers__num" data-step="2" data-collapse data-anim="rise" style="margin-bottom:-20px">100</div>
+      <div class="sd-tiers__num" data-step="1" data-collapse data-anim="rise" style="margin-bottom:110px" data-flip>200</div>
+      <div class="sd-tiers__main" data-anim="rise" data-flip>
+        <div class="sd-tiers__num">Pro 500</div>
+        <ul data-anim-children="rise" data-stagger="70" data-delay="200"><li>Ultrafast 포함</li><li>사용량 제한 없음</li><li>파트너 앱 전체 사용</li><li>Plus 대비 25배</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16. CATEGORY ICONS — focus each in turn -->
+  <section class="slide l-center">
+    <h2 class="t-h2" data-anim="rise">모든 영역에서 최전선</h2>
+    <div class="row center gap-xl mt-xl" data-focus-group data-anim-children="pop" data-stagger="80" data-delay="200">
+      <div class="stack gap-s" style="align-items:center" data-focus="1"><span class="sd-icon is-lg" data-color="blue" style="--c:var(--sd-blue)">◉</span><span class="t-h3 c-blue" style="font-size:36px">지능</span></div>
+      <div class="stack gap-s" style="align-items:center" data-focus="2"><span class="sd-icon is-lg" style="--c:var(--sd-green)">₩</span><span class="t-h3 c-green" style="font-size:36px">가격</span></div>
+      <div class="stack gap-s" style="align-items:center" data-focus="3"><span class="sd-icon is-lg" style="--c:var(--sd-white)">⚡</span><span class="t-h3 c-white" style="font-size:36px">속도</span></div>
+      <div class="stack gap-s" style="align-items:center" data-focus="4"><span class="sd-icon is-lg" style="--c:var(--sd-orange)">◐</span><span class="t-h3 c-orange" style="font-size:36px">이미지</span></div>
+      <div class="stack gap-s" style="align-items:center" data-focus="5"><span class="sd-icon is-lg" style="--c:var(--sd-violet)">♪</span><span class="t-h3 c-violet" style="font-size:36px">음성</span></div>
+    </div>
+  </section>
+
+  <!-- 17. KINETIC WORD -->
+  <section class="slide" style="justify-content:center;padding:0">
+    <div class="sd-kinetic c-blue" data-anim="fly" style="padding-left:200px">Intelligence</div>
+  </section>
+
+  <!-- 18. QUOTE -->
+  <section class="slide l-center">
+    <p class="t-caption" data-anim="rise">2026년 10월 28일</p>
+    <blockquote class="sd-quote mt-m w-80" data-anim="words" data-word-stagger="40">“연말까지 <span class="hl">연구 인턴 수준의 AI</span>를 목표로 계획을 세우고 있습니다.”</blockquote>
+  </section>
+
+  <!-- 19. TITLE + LINE CHART (slow live draw over scatter) -->
+  <section class="slide">
+    <div class="l-split grow" style="grid-template-columns:.55fr 1.45fr">
+      <h2 class="t-h2" data-anim="rise">에이전트 성능<br>최적화</h2>
+      <div class="sd-chart" data-anim="chart" data-type="line" data-values="12,14,15,15,21,26,26,27,33,38,44,45,52,61" data-labels="1월,4월,7월,10월" data-color="blue" data-duration="6000" data-scatter="140" data-end-label="false" style="height:640px"></div>
+    </div>
+  </section>
+
+  <!-- 20. TITLE + BAR CHART highlight -->
+  <section class="slide">
+    <div class="l-split grow" style="grid-template-columns:.6fr 1.4fr">
+      <div class="stack gap-s"><h2 class="t-h2" data-anim="rise">안전성 스트레스 테스트</h2><p class="t-caption" data-anim="rise" data-delay="120">낮을수록 좋음</p></div>
+      <div class="sd-chart" data-anim="chart" data-type="bar" data-values="9.6,5.7,2.4" data-labels="모델 A,모델 B,Pulse 6" data-highlight="2" data-color="blue" data-suffix="%" style="height:620px"></div>
+    </div>
+  </section>
+
+  <!-- 21. PRICE TABLE with sun glow -->
+  <section class="slide" data-bg="stars glow-left">
+    <div class="l-split grow" style="grid-template-columns:1fr 1fr">
+      <h2 class="t-display" data-anim="left" style="padding-left:80px">Pulse 6.1</h2>
+      <table class="sd-table" data-anim-children="rise" data-stagger="70">
+        <tr><th></th><th>Pulse 6.1</th><th>Pulse 6 Nova</th></tr>
+        <tr><td>입력</td><td class="is-best">$2.00</td><td>$10.00</td></tr>
+        <tr><td>캐시 입력</td><td class="is-best">$0.20</td><td>$1.00</td></tr>
+        <tr><td>출력</td><td class="is-best">$12.00</td><td>$60.00</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- 22. LOCKUP SWAP -->
+  <section class="slide l-center">
+    <div class="sd-lockup" data-anim="zoom" data-until="1" data-collapse>
+      <span class="sd-icon is-xl is-app" style="--c:var(--sd-blue);color:#fff">›_</span>
+      <span class="t-display" style="text-align:left">Relay<br>Harness</span>
+    </div>
+    <div class="sd-lockup" data-step="1" data-anim="rise">
+      <span class="sd-icon is-lg is-app" style="--c:var(--sd-blue);color:#fff">☁</span>
+      <span class="t-display">클라우드에서</span>
+    </div>
+  </section>
+
+  <!-- 23. LOGO ROW -->
+  <section class="slide l-center">
+    <p class="t-h3" data-anim="rise" style="color:var(--sd-ink-2)">함께하는 파트너</p>
+    <div class="row center gap-xl mt-xl" data-anim-children="rise" data-stagger="120" data-delay="200">
+      <span class="sd-logo">northwind</span><span class="sd-logo">◆ lattice</span><span class="sd-logo">❄ glacier</span><span class="sd-logo">tidepool</span>
+    </div>
+  </section>
+
+  <!-- 24. BIG STATS -->
+  <section class="slide" style="justify-content:center">
+    <div class="l-split" style="grid-template-columns:.8fr 1.2fr">
+      <h2 class="t-title" data-anim="mask"><span>가장 빠른</span><span>API, <span class="hl">어디서나</span></span></h2>
+      <div class="stack gap-l">
+        <div class="row gap-xl" data-anim-children="rise" data-stagger="120" data-delay="200">
+          <div class="sd-stat" data-color="green"><span class="sd-stat__num" data-anim="count">30%+</span><span class="sd-stat__label">툴 호출 워크플로 속도 향상</span></div>
+          <div class="sd-stat" data-color="violet"><span class="sd-stat__num" data-anim="count">45%+</span><span class="sd-stat__label">첫 토큰까지 시간 단축</span></div>
+        </div>
+        <div class="sd-stat" data-color="red" data-anim="rise" data-delay="450"><span class="sd-stat__num" data-anim="count" data-delay="450">99.9%+</span><span class="sd-stat__label">API 가동률</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 25. HEADLINE IN A FLOATING COLLAGE -->
+  <section class="slide l-center" data-bg="stars">
+    <div class="sd-float" data-anim="blur" data-delay="0"   style="left:150px;top:120px;width:300px;height:200px;background:linear-gradient(135deg,#6b8f71,#2e4a3a)"></div>
+    <div class="sd-float" data-anim="blur" data-delay="80"  style="left:230px;top:620px;width:260px;height:320px;background:linear-gradient(135deg,#c9a27c,#6d4c3d)"></div>
+    <div class="sd-float" data-anim="blur" data-delay="160" style="left:1440px;top:140px;width:330px;height:220px;background:linear-gradient(135deg,#7aa0c8,#2d4766)"></div>
+    <div class="sd-float" data-anim="blur" data-delay="240" style="left:1360px;top:640px;width:300px;height:300px;background:linear-gradient(135deg,#d88a8a,#7a3240)"></div>
+    <div class="sd-float" data-anim="blur" data-delay="320" style="left:620px;top:80px;width:200px;height:140px;background:linear-gradient(135deg,#b8b0e8,#5a4f9a);opacity:.7"></div>
+    <div class="sd-float" data-anim="blur" data-delay="400" style="left:1080px;top:820px;width:220px;height:150px;background:linear-gradient(135deg,#e6d38a,#8a7430);opacity:.7"></div>
+    <h2 class="t-title" data-anim="mask" data-delay="300" style="position:relative;z-index:3"><span class="c-green">8억 명이</span><span>매주 사용합니다</span></h2>
+  </section>
+
+  <!-- 26. RECAP BENTO — everything we announced -->
+  <section class="slide" style="padding:80px 100px">
+    <div class="sd-bento" style="grid-template-rows:repeat(3,1fr)" data-anim-children="zoom" data-stagger="45">
+      <div class="sd-tile c-3 r-2 is-center" style="background:#0f1013"><span class="t-display sheen">Orbit</span><div class="sd-dots-row mt-m" style="gap:14px"><span class="sd-dot" data-color="cyan" data-face="^ ^" style="--size:54px"></span><span class="sd-dot" data-color="orange" data-face="o o" style="--size:54px"></span><span class="sd-dot" data-color="violet" data-face="- -" style="--size:54px"></span></div></div>
+      <div class="sd-tile c-3 is-accent" style="--c:var(--sd-blue)"><span class="t-caption">새 모델</span><span class="t-h3">Pulse 6.1</span></div>
+      <div class="sd-tile c-3 is-light"><span class="t-caption" style="color:#666">속도</span><span class="t-h3">Ultrafast</span></div>
+      <div class="sd-tile c-3" style="background:#0f1013"><canvas class="sd-spiral" data-count="700"></canvas><span class="sd-tile__label" style="color:#fff">Pulse 6 Nova</span></div>
+      <div class="sd-tile c-2 is-accent" style="--c:var(--sd-green)"><span class="t-caption">팀</span><span class="t-h3" style="font-size:40px">Space</span></div>
+      <div class="sd-tile c-4 sd-placeholder">제품 스크린샷</div>
+      <div class="sd-tile c-3 is-accent" style="--c:var(--sd-violet)"><span class="t-caption">요금제</span><span class="t-h3">Pro 500</span></div>
+      <div class="sd-tile c-4 is-light"><span class="t-caption" style="color:#666">개발자</span><span class="t-h3">Relay Harness</span></div>
+      <div class="sd-tile c-3 is-accent" style="--c:var(--sd-orange)"><span class="t-caption">보안</span><span class="t-h3" style="font-size:40px">Private Mode</span></div>
+      <div class="sd-tile c-2 is-center" style="background:#0f1013"><div class="sd-orb" style="width:56%"></div></div>
+      <div class="sd-tile c-3 is-accent" style="--c:var(--sd-cyan)"><span class="t-caption">마켓</span><span class="t-h3" style="font-size:40px">Marketplace</span></div>
+    </div>
+  </section>
+
+  <!-- 27. AGENDA COLUMNS -->
+  <section class="slide">
+    <h2 class="t-h2" data-anim="rise">오늘의 세션</h2>
+    <div class="sd-agenda mt-l" data-anim-children="rise" data-stagger="110" data-delay="150">
+      <div style="--c:var(--sd-orange)"><h4>메인 홀</h4><ul><li>오픈소스와 함께 만들기</li><li>Orbit Game Studio</li><li>플랫폼의 다음 단계</li><li>클로징 Q&amp;A</li></ul></div>
+      <div style="--c:var(--sd-red)"><h4>스튜디오 A</h4><ul><li>무엇을 만들 수 있을까</li><li>에이전트를 서비스로</li><li>웹앱의 다음 세대</li></ul></div>
+      <div style="--c:var(--sd-blue)"><h4>스튜디오 B</h4><ul><li>루프 다음에 오는 것</li><li>보안: 취약점에서 수정까지</li><li>모델을 유용하게 만드는 법</li></ul></div>
+      <div style="--c:var(--sd-green)"><h4>야외 무대</h4><ul><li>지능을 위한 과잉 설계 멈추기</li><li>에이전트가 직접 만드는 앱</li><li>마지막 인간 코드 리뷰</li></ul></div>
+    </div>
+  </section>
+
+  <!-- 28. FILM TITLE — bokeh disc collapses, letters resolve outward; exits with a right-to-left smear -->
+  <section class="slide l-center" data-bg="black">
+    <h1 class="t-hero t-glowmark" data-anim="bokeh" data-seed="1" data-exit="smear">Orbit</h1>
+  </section>
+
+  <!-- 29. WORDMARK + PHONE CHAT — wordmark is a persistent anchor (data-keep) across the next slides -->
+  <section class="slide" style="padding:0" data-transition="beat">
+    <div class="t-hero" data-keep="orbit" data-anim="fade" style="position:absolute;left:160px;top:400px">Orbit</div>
+    <div class="sd-phone" data-anim="fade" style="position:absolute;left:1160px;top:110px;height:1060px">
+      <div class="sd-phone__status"><span>9:41</span><span>●●●</span></div>
+      <div class="sd-phone__head"><span class="sd-dot" data-color="green" data-face="o o"></span>Orbit</div>
+      <div class="sd-phone__body">
+        <div class="sd-chat is-phone" data-anim="chat" data-delay="500" style="padding-bottom:170px">
+          <div class="sd-msg is-me" data-at="0">이번 주 일정 좀 정리해 줘</div>
+          <div class="sd-msg is-note" data-at="500">읽음</div>
+          <div class="sd-msg is-typing" data-at="1500" data-hide-at="2900"><i></i><i></i><i></i></div>
+          <div class="sd-msg" data-at="2900">화요일 오후가 비어 있어요. 팀 회의를 3시로 옮기고 금요일엔 출장 준비 시간을 잡아 둘게요.</div>
+          <div class="sd-msg is-me" data-at="4700">좋아, 그렇게 해 줘</div>
+          <div class="sd-msg is-typing" data-at="5300" data-hide-at="6400"><i></i><i></i><i></i></div>
+          <div class="sd-msg" data-at="6400">완료했어요. 참석자에게 변경 알림도 보냈어요.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 30. DEVICE HUB — same anchor; phone bleeds off the bottom, tiles fade in in random order -->
+  <section class="slide" style="padding:0" data-transition="beat">
+    <div class="t-hero" data-keep="orbit" data-anim="fade" style="position:absolute;left:160px;top:400px">Orbit</div>
+    <div class="sd-phone" data-anim="fade" style="position:absolute;left:1160px;top:150px;height:1060px">
+      <div class="sd-phone__status"><span>9:41</span><span>●●●</span></div>
+      <div class="sd-phone__head" style="align-items:flex-start;padding-left:34px;font-size:30px;color:#111;font-weight:640">연결된 앱</div>
+      <div class="sd-phone__body" style="padding:24px 30px;display:flex;flex-direction:column;gap:18px;font-size:24px">
+        <div>📅 캘린더</div><div>✉️ 메일</div><div>📁 드라이브</div><div>💬 메신저</div><div>🧾 회계</div>
+      </div>
+    </div>
+    <div data-anim-children="ui" data-stagger="100" data-stagger-order="random" data-delay="300">
+      <div class="sd-sat" style="left:930px;top:230px"><span style="font-size:44px;font-weight:700">4K+</span><span>연결 가능한 앱<small>오늘 기준</small></span></div>
+      <div class="sd-sat is-tile" style="left:1660px;top:180px">📅</div>
+      <div class="sd-sat is-tile" style="left:1700px;top:420px">✉️</div>
+      <div class="sd-sat is-tile" style="left:1010px;top:520px">📁</div>
+      <div class="sd-sat is-tile" style="left:1680px;top:680px">💬</div>
+      <div class="sd-sat is-tile is-ghost" style="left:960px;top:760px"></div>
+      <div class="sd-sat is-tile is-ghost" style="left:1800px;top:40px"></div>
+    </div>
+  </section>
+
+  <!-- 31. PRODUCT UI + FEATURE NAV — the window stays, only its content swaps with the nav focus -->
+  <section class="slide">
+    <div class="l-split grow is-wide-left" style="column-gap:80px">
+      <div class="sd-card sd-window" data-anim="focus" style="height:760px">
+        <div class="sd-window__bar"><i></i><i></i><i></i></div>
+        <div class="sd-window__body sd-swap" style="padding:40px 48px">
+          <div data-focus="0 1"><b style="font-size:34px">배포 베타 트래커</b><div style="margin-top:26px">DOC</div></div>
+          <div data-focus="2"><b style="font-size:34px">에이전트와 함께 쓰기</b><div style="margin-top:26px">DOC</div></div>
+          <div data-focus="3"><b style="font-size:34px">페이지 관리</b><div style="margin-top:26px">DOC</div></div>
+        </div>
+      </div>
+      <div class="sd-nav" data-focus-group data-anim-children="ui" data-stagger="80">
+        <div class="sd-nav__item" data-focus="0 1"><i>●</i>살아있는 문서</div>
+        <div class="sd-nav__item" data-focus="2"><i>●</i>에이전트와 협업</div>
+        <div class="sd-nav__item" data-focus="3"><i>●</i>페이지 관리</div>
+        <div class="sd-nav__item"><i>●</i>프레젠테이션<small>곧 출시</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 32. CAMERA INSIDE A SCREENSHOT — zoom to a detail, back out, then scroll the long document -->
+  <section class="slide l-center">
+    <div class="sd-shot is-light" data-anim="focus" style="width:1180px;height:860px">
+      <div class="sd-cam" data-cam="0:50% 50% 1 | 1:14% 9% 2.4 | 2:50% 50% 1">
+        <div data-scroll-step="3" data-duration="1100" style="padding:56px 64px;text-align:left">
+          <div style="display:inline-block;padding:8px 18px;border-radius:999px;background:var(--sd-blue);color:#fff;font-size:22px;font-weight:600;margin-bottom:28px">AI 요약</div>
+          <div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:72%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:88%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:58%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:72%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:88%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:58%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:72%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:88%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:58%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:72%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:88%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:58%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:72%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:88%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:58%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:92%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:80%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:86%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:64%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.06);width:90%"></div><div style="height:22px;margin:0 0 18px;border-radius:6px;background:rgba(0,0,0,0.14);width:72%"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 33. APP ICON + INTEGRATION GRID -->
+  <section class="slide l-center">
+    <div class="sd-applockup">
+      <div class="stack gap-s" style="align-items:center" data-anim="focus"><span class="sd-appicon__icon" style="--c:var(--sd-green);width:220px;height:220px;font-size:90px">◕◕</span><span class="t-h3" style="font-size:34px">Dottie</span></div>
+      <div class="sd-applockup__grid" data-anim-children="rise" data-stagger="95" data-delay="170" data-dist="12" data-spring="smooth">
+        <figure><i>◎</i><figcaption>Orbit</figcaption></figure><figure><i>#</i><figcaption>메신저</figcaption></figure><figure><i>▦</i><figcaption>시트</figcaption></figure><figure><i>☎</i><figcaption>전화</figcaption></figure>
+        <figure><i>▭</i><figcaption>컴퓨터</figcaption></figure><figure><i>⌘</i><figcaption>VM</figcaption></figure><figure><i>▯</i><figcaption>모바일</figcaption></figure><figure><i>⚙</i><figcaption>플러그인</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 34. LIVE DEMO FRAME — LED layout; → swaps the recording; → switches to window + PIP (hard cut); exits with a dip to black -->
+  <section class="slide sd-demo" data-bg="black" data-step-class="2:is-program" data-transition="dip">
+    <div class="sd-demo__window sd-swap">
+      <div class="sd-placeholder" data-focus="0" style="background:#f4f4f1;color:#888">데모 화면 1 (video / img)</div>
+      <div class="sd-placeholder" data-focus="1 2" style="background:#1b1c20">데모 화면 2</div>
+    </div>
+    <div class="sd-pip sd-placeholder">발표자 카메라</div>
+  </section>
+
+  <!-- 35. APP ICON CARD — arrives after the dip with a plain fade -->
+  <section class="slide l-center">
+    <div class="sd-appicon" data-anim="fade" style="margin-top:-60px">
+      <div class="sd-appicon__icon" style="--c:var(--sd-green)">◕◕</div>
+      <div class="sd-appicon__name">Dottie</div>
+    </div>
+  </section>
+
+  <!-- 36. 3D COLLAGE FLY-THROUGH — cards drift with parallax and a slow dolly, the title stays put -->
+  <section class="slide l-center">
+    <div class="sd-flythrough" data-anim-children="fade" data-stagger="60">
+      <div data-z="0" style="left:260px;top:120px;width:300px;height:200px;background:linear-gradient(135deg,#7b9b80,#33503f);opacity:.6"></div>
+      <div data-z="2" style="left:620px;top:660px;width:380px;height:250px;background:linear-gradient(135deg,#b49ce8,#55479a)"><span class="sd-nametag" style="--c:var(--sd-yellow)">지우</span></div>
+      <div data-z="1" style="left:1180px;top:110px;width:340px;height:220px;background:linear-gradient(135deg,#86a8d0,#2f4b6c)"></div>
+      <div data-z="3" style="left:1400px;top:560px;width:460px;height:300px;background:linear-gradient(135deg,#e09a8a,#7c3a40)"><span class="sd-nametag" style="--c:var(--sd-cyan)">민준</span></div>
+      <div data-z="0" style="left:1700px;top:250px;width:260px;height:170px;background:linear-gradient(135deg,#d8c27a,#7f6a2b);opacity:.6"></div>
+      <div data-z="1" style="left:130px;top:620px;width:320px;height:210px;background:linear-gradient(135deg,#8fd0c0,#2f6a5c)"></div>
+    </div>
+    <h2 class="t-display" data-anim="rise" style="position:relative;z-index:3">팀 <span class="grad">스페이스</span></h2>
+  </section>
+
+  <!-- 37. STACKED AREA CHART + AGENT STATUS PILL -->
+  <section class="slide" style="justify-content:center">
+    <div class="stack gap-m">
+      <div class="sd-agentpill" data-anim="ui"><b>+</b><span style="width:1px;height:28px;background:rgba(0,0,0,.15)"></span><span><b data-anim="tick" data-from="38" data-format="작업 중 · {n}초"></b><br><span class="sd-shimmer" style="font-size:20px">생각하는 중…</span></span></div>
+      <div class="sd-card" data-anim="focus" style="background:#0b2a28;padding:40px 44px;height:640px">
+        <p style="color:#cfe9e4;font-size:28px;font-weight:600;margin-bottom:20px">고객 피드백 추이</p>
+        <div class="sd-chart" data-anim="chart" data-type="stack" data-values="4,5,4,6,5,7,6,8,7,9,8,10|3,4,3,4,5,4,6,5,6,5,7,6|2,3,2,3,2,4,3,3,4,3,4,5|2,2,3,2,3,3,2,4,3,4,3,4" data-labels="1주,4주,8주,12주" data-duration="1600" style="height:500px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 38. CLOSING — particles assemble the mark, the crew pops in -->
+  <section class="slide l-center" data-bg="stars">
+    <div data-anim="assemble" data-from="center" style="width:300px;height:300px">
+      <svg viewBox="0 0 200 200" width="300" height="300" fill="none" stroke="#f3f3f1" stroke-width="16"><circle cx="100" cy="100" r="62"/><circle cx="100" cy="100" r="24" fill="#f3f3f1" stroke="none"/><circle cx="158" cy="42" r="16" fill="#f3f3f1" stroke="none"/></svg>
+    </div>
+    <p class="t-h2 mt-l" data-anim="rise" data-delay="2300">만드는 사람들에게</p>
+    <div class="sd-dots-row mt-m" data-anim-children="pop" data-stagger="60" data-delay="2600">
+      <span class="sd-dot" data-color="blue" data-face="^ ^" style="--size:64px"></span><span class="sd-dot" data-color="green" data-face="o o" style="--size:64px"></span><span class="sd-dot" data-color="yellow" data-face="- -" style="--size:64px"></span><span class="sd-dot" data-color="orange" data-face="&gt; &lt;" style="--size:64px"></span><span class="sd-dot" data-color="violet" data-face="* *" style="--size:64px"></span><span class="sd-dot" data-color="white" data-face="+ +" style="--size:64px"></span>
+    </div>
+  </section>
+
+</div>
+<div class="sd-bug" data-text="Orbit Day 2026" data-mark-hold="6000" data-hold="9000"></div>
+<script>
+/* ==========================================================================
+   StageDeck engine — keynote-stage slides with spring ("chewy") motion.
+   No dependencies. Include after the .deck markup:
+     <script src="assets/stagedeck.js"><\/script>
+   ========================================================================== */
+(function () {
+  'use strict';
+  const W = 1920, H = 1080;
+  const root = document.documentElement;
+  root.classList.add('sd-ready');
+  const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ------------------------------------------------------------------ math */
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const rand = (a = 0, b = 1) => a + Math.random() * (b - a);
+  const ease = {
+    linear: t => t,
+    out: t => 1 - Math.pow(1 - t, 3),
+    out5: t => 1 - Math.pow(1 - t, 5),
+    expo: t => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t)),
+    inOut: t => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+    in: t => t * t * t,
+  };
+
+  /* ---------------------------------------------------------------- spring
+     Apple-style parameters: perceptual duration (s) + bounce (0 = critically damped).
+     stiffness = (2π/d)², damping ratio ζ = 1 − bounce.  Returns {f(t)->0..1(+overshoot), T}. */
+  const springCache = new Map();
+  function spring(duration = .6, bounce = .25, v0 = 0) {
+    const key = duration + '|' + bounce + '|' + v0;
+    if (springCache.has(key)) return springCache.get(key);
+    const w0 = 2 * Math.PI / duration;
+    const z = bounce >= 0 ? 1 - bounce : 1 / (1 - bounce);
+    let f;
+    if (z < 1) {
+      const wd = w0 * Math.sqrt(1 - z * z), B = (v0 - z * w0) / wd;
+      f = t => 1 + Math.exp(-z * w0 * t) * (-Math.cos(wd * t) + B * Math.sin(wd * t));
+    } else if (z === 1) {
+      f = t => 1 + Math.exp(-w0 * t) * (-1 + (v0 - w0) * t);
+    } else {
+      const s = Math.sqrt(z * z - 1), r1 = -w0 * (z - s), r2 = -w0 * (z + s);
+      const C2 = (v0 + r1) / (r2 - r1), C1 = -1 - C2;
+      f = t => 1 + C1 * Math.exp(r1 * t) + C2 * Math.exp(r2 * t);
+    }
+    let T = 0;
+    for (let t = 0; t < 6; t += 1 / 240) if (Math.abs(f(t) - 1) > 0.0012) T = t;
+    T = Math.max(T + 1 / 240, .05);
+    const out = { f: t => (t >= T ? 1 : f(Math.max(0, t))), T, duration, bounce };
+    springCache.set(key, out);
+    return out;
+  }
+  /* Presets. "chewy" (쫀득) = fast attack, ~4–5% overshoot, long sticky settle. */
+  const SPRINGS = {
+    smooth: [.55, 0],
+    snappy: [.42, .14],
+    chewy: [.62, .3],
+    soft: [.85, .16],
+    bouncy: [.6, .46],
+    heavy: [1.0, .2],
+    jellyX: [.5, .38],
+    jellyY: [.64, .38],
+  };
+  const sp = name => (Array.isArray(name) ? spring(name[0], name[1]) : name && name.f ? name : spring(...(SPRINGS[name] || SPRINGS.chewy)));
+  function linearEasing(s, n = 64) {
+    const v = [];
+    for (let i = 0; i <= n; i++) v.push(+s.f(s.T * i / n).toFixed(4));
+    return `linear(${v.join(', ')})`;
+  }
+  if (window.CSS && CSS.supports && CSS.supports('transition-timing-function', 'linear(0, 1)')) {
+    for (const name of ['chewy', 'snappy', 'soft', 'bouncy', 'smooth']) {
+      const s = sp(name);
+      root.style.setProperty(`--sd-ease-${name}`, linearEasing(s));
+      root.style.setProperty(`--sd-dur-${name}`, Math.round(s.T * 1000) + 'ms');
+    }
+  }
+
+  /* play: sample fn(t seconds) -> style object into WAAPI keyframes */
+  function play(el, fn, T, o = {}) {
+    if (REDUCE || o.instant) { const end = fn(T); Object.assign(el.style, {}); return finishInstant(el, end, o); }
+    const n = Math.max(24, Math.min(90, Math.round(T * 60)));
+    const kf = [];
+    for (let i = 0; i <= n; i++) { const t = T * i / n; kf.push(Object.assign({ offset: i / n }, fn(t))); }
+    const a = el.animate(kf, { duration: T * 1000, delay: o.delay || 0, fill: 'both', easing: 'linear' });
+    (el._anims || (el._anims = [])).push(a);
+    if (!o.keep) a.finished.then(() => { if (!o.keep) { a.cancel(); } }).catch(() => {});
+    return a;
+  }
+  function finishInstant(el, end, o) {
+    if (o.keep) { const a = el.animate([end, end], { duration: 1, fill: 'both' }); (el._anims || (el._anims = [])).push(a); return a; }
+    return null;
+  }
+  function cancelAnims(el) { if (el._anims) { el._anims.forEach(a => a.cancel()); el._anims = []; } if (el._raf) { cancelAnimationFrame(el._raf); el._raf = 0; } if (el._timers) { el._timers.forEach(clearTimeout); el._timers = []; } }
+  const later = (el, ms, fn) => { const id = setTimeout(fn, ms); (el._timers || (el._timers = [])).push(id); return id; };
+
+  /* ------------------------------------------------------------- effects */
+  const attr = (el, k) => { if (el.dataset[k] !== undefined) return el.dataset[k]; const p = el.parentElement; return p && p.dataset.animChildren !== undefined ? p.dataset[k] : undefined; };
+  const blurIn = (t, px, dur = .45) => `blur(${((1 - ease.expo(clamp(t / dur))) * px).toFixed(2)}px)`;
+  const FX = {
+    none(el) { return null; },
+    fade(el, o) { return play(el, t => ({ opacity: ease.out(clamp(t / .4)) }), .4, o); },
+    rise(el, o) {
+      const s = sp(o.spring || attr(el, 'spring') || 'chewy'), d = +(attr(el, 'dist') || o.dist || clamp((el.offsetHeight || 80) * .32, 12, 56));
+      return play(el, t => ({ opacity: ease.out(clamp(t / .3)), transform: `translate3d(0,${((1 - s.f(t)) * d).toFixed(2)}px,0)`, filter: blurIn(t, d < 20 ? 6 : 12) }), s.T, o);
+    },
+    /* UI-mockup element: plain fade + 4px blur, ~0.2s, no movement (measured on keynote UI) */
+    ui(el, o) { return play(el, t => ({ opacity: ease.out(clamp(t / .18)), filter: blurIn(t, 4, .2) }), .22, o); },
+    /* screenshot focus: blur 10 -> 0 with opacity, no scale (frames never move) */
+    focus(el, o) { return play(el, t => ({ opacity: ease.out(clamp(t / .3)), filter: blurIn(t, 10, .32) }), .34, o); },
+    /* tall content scrolls inside its frame with motion blur (trigger with data-scroll-step) */
+    scroll(el, o) {
+      const frame = el.parentElement, dist = +(el.dataset.to || Math.max(0, el.scrollHeight - frame.clientHeight)), T = +(el.dataset.duration || 1100) / 1000;
+      return play(el, t => { const k = ease.inOut(clamp(t / T)), v = Math.abs(ease.inOut(clamp((t + .016) / T)) - k) / .016; return { transform: `translate3d(0,${(-dist * k).toFixed(1)}px,0)`, filter: `blur(${Math.min(10, v * dist * .004).toFixed(2)}px)` }; }, T, Object.assign({ keep: true }, o));
+    },
+    /* film-title open: soft bokeh disc collapses to a point, letters resolve outward from data-seed */
+    bokeh(el, o) { return bokehOpen(el, o); },
+    /* chat thread: children appear at data-at (ms), data-hide-at removes (typing dots); older messages slide up */
+    chat(el, o) { return chatPlay(el, o); },
+    /* live counter: "{n}" in data-format replaced every second, starting at data-from */
+    tick(el, o) {
+      el.style.opacity = 1;
+      const fmt = el.dataset.format || '{n}'; let n = +(el.dataset.from || 0);
+      el.textContent = fmt.replace('{n}', n);
+      if (o.instant || REDUCE) return;
+      const step = () => { n++; el.textContent = fmt.replace('{n}', n); later(el, 1000, step); };
+      later(el, (o.delay || 0) + 1000, step);
+    },
+    drop(el, o) {
+      const s = sp(o.spring || el.dataset.spring || 'chewy'), d = +(el.dataset.dist || 64);
+      return play(el, t => ({ opacity: ease.out(clamp(t / .3)), transform: `translate3d(0,${(-(1 - s.f(t)) * d).toFixed(2)}px,0)`, filter: blurIn(t, 12) }), s.T, o);
+    },
+    left(el, o) { return slideX(el, o, -1); },
+    right(el, o) { return slideX(el, o, 1); },
+    zoom(el, o) {
+      const s = sp(o.spring || el.dataset.spring || 'chewy');
+      return play(el, t => ({ opacity: ease.out(clamp(t / .28)), transform: `scale(${(.82 + .18 * s.f(t)).toFixed(4)})`, filter: blurIn(t, 10) }), s.T, o);
+    },
+    /* jelly pop: x/y scales on slightly different springs -> one squash/stretch wobble */
+    pop(el, o) {
+      const sx = sp('jellyX'), sy = sp('jellyY'), T = Math.max(sx.T, sy.T), from = +(el.dataset.from || 0);
+      return play(el, t => ({ opacity: ease.out(clamp(t / .14)), transform: `scale(${lerp(from, 1, sx.f(t)).toFixed(4)}, ${lerp(from, 1, sy.f(t)).toFixed(4)})` }), T, o);
+    },
+    /* focus pull: blurred & slightly large -> sharp */
+    blur(el, o) {
+      const s = sp(o.spring || el.dataset.spring || 'soft');
+      return play(el, t => ({ opacity: ease.out(clamp(t / .45)), transform: `scale(${(1 + (1 - s.f(t)) * .07).toFixed(4)})`, filter: blurIn(t, 28, .8) }), Math.max(s.T, .8), o);
+    },
+    /* line mask reveal; lines = <br>-separated or direct child elements */
+    mask(el, o) {
+      const lines = splitLines(el), s = sp(o.spring || el.dataset.spring || 'chewy'), st = +(el.dataset.lineStagger || 90);
+      el.style.opacity = 1;
+      lines.forEach((ln, i) => play(ln, t => ({ transform: `translate3d(0,${((1 - s.f(t)) * 108).toFixed(2)}%,0)` }), s.T, { delay: (o.delay || 0) + i * st, instant: o.instant }));
+      return null;
+    },
+    /* word-by-word rise with blur */
+    words(el, o) {
+      const words = splitWords(el), s = sp(o.spring || 'chewy'), st = +(el.dataset.wordStagger || 55);
+      el.style.opacity = 1;
+      words.forEach((w, i) => play(w, t => ({ opacity: ease.out(clamp(t / .3)), transform: `translate3d(0,${((1 - s.f(t)) * 42).toFixed(2)}px,0)`, filter: blurIn(t, 14) }), s.T, { delay: (o.delay || 0) + i * st, instant: o.instant }));
+      return null;
+    },
+    /* number count-up + rise */
+    count(el, o) {
+      const raw = el.dataset.raw || (el.dataset.raw = el.textContent.trim());
+      const m = raw.match(/^(\D*?)(\d[\d,]*\.?\d*)(.*)$/);
+      FX.rise(el, o);
+      if (!m || o.instant || REDUCE) { el.textContent = raw; return; }
+      const [, pre, num, post] = m, dec = (num.split('.')[1] || '').length, comma = num.includes(','), target = parseFloat(num.replace(/,/g, ''));
+      const fmt = v => pre + (comma ? v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : v.toFixed(dec)) + post;
+      const dur = +(el.dataset.duration || 1500), start = performance.now() + (o.delay || 0);
+      el.textContent = fmt(0);
+      const tick = now => { const p = clamp((now - start) / dur); el.textContent = fmt(target * ease.expo(p)); if (p < 1) el._raf = requestAnimationFrame(tick); else el.textContent = raw; };
+      el._raf = requestAnimationFrame(tick);
+    },
+    /* typewriter */
+    type(el, o) {
+      const raw = el.dataset.raw || (el.dataset.raw = el.textContent);
+      el.style.opacity = 1;
+      if (o.instant || REDUCE) { el.textContent = raw; return; }
+      el.textContent = ''; el.classList.add('sd-typing');
+      const cps = +(el.dataset.cps || 38), start = performance.now() + (o.delay || 0);
+      const tick = now => { const n = Math.floor(Math.max(0, now - start) / 1000 * cps); el.textContent = raw.slice(0, n); if (n < raw.length) el._raf = requestAnimationFrame(tick); else later(el, 1600, () => el.classList.remove('sd-typing')); };
+      el._raf = requestAnimationFrame(tick);
+    },
+    /* svg stroke draw (any <path>/<line>/<polyline> inside) */
+    draw(el, o) {
+      el.style.opacity = 1;
+      el.querySelectorAll('path,line,polyline,circle,rect').forEach((p, i) => {
+        if (p.getAttribute('data-nodraw') !== null || !p.getTotalLength) return;
+        const L = p.getTotalLength(); p.style.strokeDasharray = L;
+        play(p, t => ({ strokeDashoffset: (L * (1 - ease.expo(clamp(t / 1.6)))).toFixed(1) }), 1.6, { delay: (o.delay || 0) + i * 120, instant: o.instant });
+      });
+      return null;
+    },
+    /* kinetic word: flies in with motion blur + stretch, then drifts */
+    fly(el, o) {
+      const s = sp([.95, .2]), dir = el.dataset.from === 'left' ? -1 : 1, dist = +(el.dataset.dist || 1300), drift = +(el.dataset.drift || 26);
+      const T = s.T + 3;
+      return play(el, t => {
+        const k = s.f(t), v = (s.f(t + .016) - k) / .016;
+        const x = (1 - k) * dist * dir - dir * drift * Math.max(0, t - .2);
+        return { opacity: ease.out(clamp(t / .15)), transform: `translate3d(${x.toFixed(1)}px,0,0) scaleX(${(1 + Math.min(.12, Math.abs(v) * .035)).toFixed(4)})`, filter: `blur(${Math.min(16, Math.abs(v) * 3.2).toFixed(2)}px)` };
+      }, T, Object.assign({ keep: true }, o));
+    },
+    /* dot-matrix resolve: orange dots -> violet outline -> solid fill */
+    dots(el, o) { return dotText(el, o); },
+    /* giant dot zooms out to a small character (intro) */
+    zoomout(el, o) {
+      const s = sp([.8, .26]), from = +(el.dataset.from || 22), hold = +(el.dataset.hold || 1400) / 1000;
+      if (!o.instant) {
+        later(el, (o.delay || 0) + 480, () => wink(el, 420));
+      }
+      return play(el, t => {
+        const pre = 1 - .08 * ease.inOut(clamp(t / hold));
+        const k = s.f(Math.max(0, t - hold));
+        const sc = t < hold ? from * pre : lerp(from * .92, 1, k);
+        return { opacity: 1, transform: `scale(${sc.toFixed(4)})` };
+      }, hold + s.T, o);
+    },
+    /* rolling dot: travels from data-from-x/y (px offset) to its place, rolling + motion-blur smear.
+       With data-to-x/y it passes through and exits instead of landing. */
+    roll(el, o) {
+      const fx = +(el.dataset.fromX ?? -1500), fy = +(el.dataset.fromY ?? 0);
+      const R = (el.offsetWidth || 240) / 2, deg = 180 / Math.PI;
+      const pass = el.dataset.toX !== undefined || el.dataset.toY !== undefined;
+      const tx = +(el.dataset.toX || 0), ty = +(el.dataset.toY || 0);
+      const s = pass ? null : sp(el.dataset.spring || [.72, .26]);
+      const T = pass ? +(el.dataset.duration || 700) / 1000 : s.T;
+      const pos = t => { if (pass) { const k = ease.inOut(clamp(t / T)); return [lerp(fx, tx, k), lerp(fy, ty, k)]; } const k = s.f(t); return [fx * (1 - k), fy * (1 - k)]; };
+      return play(el, t => {
+        const [x, y] = pos(t), [x2, y2] = pos(t + .016);
+        const vx = (x2 - x) / 16, vy = (y2 - y) / 16, v = Math.hypot(vx, vy), ang = Math.atan2(vy, vx) * deg;
+        const st = Math.min(.32, v * .05);
+        return { opacity: ease.out(clamp(t / .06)), transform: `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${ang.toFixed(1)}deg) scale(${(1 + st).toFixed(3)},${(1 - st * .35).toFixed(3)}) rotate(${(-ang).toFixed(1)}deg) rotate(${(x / R * deg).toFixed(1)}deg)`, filter: `blur(${Math.min(16, v * 2.4).toFixed(2)}px)` };
+      }, T, Object.assign({ keep: pass }, o));
+    },
+    /* height grows from 0 (list items that push their card taller) */
+    grow(el, o) {
+      const h = el.scrollHeight, s = sp(o.spring || 'chewy');
+      el.style.overflow = 'hidden';
+      const a = play(el, t => ({ height: (Math.max(0, s.f(t)) * h).toFixed(1) + 'px', opacity: ease.out(clamp((t - .06) / .3)), transform: `translate3d(0,${((1 - s.f(t)) * 16).toFixed(2)}px,0)` }), s.T, o);
+      if (a) a.finished.then(() => { el.style.overflow = ''; }).catch(() => {}); else el.style.overflow = '';
+      return a;
+    },
+    /* particles swirl in and assemble into the element's shape (text or <img>/<svg>) */
+    assemble(el, o) { return assemble(el, o); },
+    /* character typing that keeps gradients intact: clips each line at measured glyph edges */
+    typein(el, o) {
+      const lines = splitLines(el), cps = +(el.dataset.cps || (/[\uac00-\ud7a3]/.test(el.textContent) ? 12 : 18));
+      el.style.opacity = 1;
+      let t0 = o.delay || 0;
+      lines.forEach(ln => {
+        if (o.instant || REDUCE) return;
+        const base = ln.getBoundingClientRect(), k = base.width / Math.max(1, ln.offsetWidth), W = ln.offsetWidth;
+        const edges = [], range = document.createRange(), walker = document.createTreeWalker(ln, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) for (let i = 0; i < node.length; i++) {
+          range.setStart(node, i); range.setEnd(node, i + 1);
+          const r = range.getBoundingClientRect(); if (r.width > 0.5 || /\s/.test(node.data[i])) edges.push((r.right - base.left) / k);
+        }
+        if (!edges.length) return;
+        const N = edges.length, kf = [{ offset: 0, clipPath: `inset(-10% ${W + 40}px -30% -10px)`, easing: 'step-end' }];
+        edges.forEach((x, i) => kf.push({ offset: (i + 1) / N, clipPath: `inset(-10% ${Math.max(-40, W - x - 2).toFixed(1)}px -30% -10px)`, easing: 'step-end' }));
+        kf[kf.length - 1].clipPath = 'inset(-10% -40px -30% -10px)';
+        const dur = N / cps * 1000;
+        const a = ln.animate(kf, { duration: dur, delay: t0, fill: 'both' });
+        (ln._anims || (ln._anims = [])).push(a);
+        a.finished.then(() => a.cancel()).catch(() => {});
+        t0 += dur + 160;
+      });
+      return null;
+    },
+    /* dim -> bright: text that "fades up from gray" */
+    glow(el, o) {
+      return play(el, t => ({ opacity: (t < .2 ? ease.out(t / .2) * .3 : .3 + .7 * ease.inOut(clamp((t - .2) / .9))).toFixed(3), filter: blurIn(t, 6, 1) }), 1.1, o);
+    },
+    /* race card: progress bar + timer, content sharpens at the finish */
+    race(el, o) {
+      const T = +(el.dataset.time || 2000) / 1000, bar = el.querySelector('.sd-race__bar i'), media = el.querySelector('.sd-race__media'), time = el.querySelector('.sd-race__time');
+      el.classList.remove('is-done');
+      FX.rise(el, o);
+      const d = (o.delay || 0) + 500;
+      if (o.instant || REDUCE) { el.classList.add('is-done'); if (time) time.textContent = T.toFixed(1) + 's'; return; }
+      if (bar) play(bar, t => ({ transform: `scaleX(${ease.inOut(clamp(t / T)).toFixed(4)})` }), T, { delay: d, keep: true });
+      if (media) play(media, t => ({ opacity: (.25 + .75 * ease.in(clamp(t / T))).toFixed(3), filter: `blur(${(18 * (1 - ease.in(clamp(t / T)))).toFixed(2)}px) saturate(${(.3 + .7 * clamp(t / T)).toFixed(2)})` }), T, { delay: d, keep: true });
+      const start = performance.now() + d;
+      const tick = now => { const p = clamp((now - start) / 1000 / T); if (time) time.textContent = (p * T).toFixed(1) + 's'; if (p < 1) el._raf = requestAnimationFrame(tick); else { el.classList.add('is-done'); FX.pop(el.querySelector('.sd-race__done') || document.createElement('i'), {}); } };
+      el._raf = requestAnimationFrame(tick);
+      return null;
+    },
+    /* camera settle: lands slightly too close, eases back (use after a dive) */
+    settle(el, o) {
+      const s = sp(o.spring || el.dataset.spring || 'heavy'), from = +(el.dataset.from || 1.16);
+      return play(el, t => ({ opacity: ease.out(clamp(t / .25)), transform: `scale(${lerp(from, 1, s.f(t)).toFixed(4)})`, filter: blurIn(t, 8, .6) }), s.T, o);
+    },
+    /* slow push for photos */
+    kenburns(el, o) {
+      return play(el, t => ({ opacity: ease.out(clamp(t / .8)), transform: `scale(${(1.08 - .08 * ease.out(clamp(t / 9))).toFixed(4)})` }), 9, Object.assign({ keep: true }, o));
+    },
+  };
+  function slideX(el, o, dir) {
+    const s = sp(o.spring || el.dataset.spring || 'chewy'), d = +(el.dataset.dist || 90) * dir;
+    return play(el, t => ({ opacity: ease.out(clamp(t / .3)), transform: `translate3d(${((1 - s.f(t)) * d).toFixed(2)}px,0,0)`, filter: blurIn(t, 12) }), s.T, o);
+  }
+
+  /* ------------------------------------------------------------ text split */
+  function splitLines(el) {
+    if (el._lines) return el._lines;
+    let parts;
+    if (el.querySelector(':scope > br')) parts = el.innerHTML.split(/<br\s*\/?>/i);
+    else {
+      const kids = [...el.childNodes].filter(n => !(n.nodeType === 3 && !n.textContent.trim()));
+      parts = kids.length > 1 && kids.every(n => n.nodeType === 1) ? kids.map(n => n.outerHTML) : [el.innerHTML];
+    }
+    el.innerHTML = parts.map(p => `<span class="sd-mask"><span class="sd-mask__in">${p}</span></span>`).join('');
+    return (el._lines = [...el.querySelectorAll('.sd-mask__in')]);
+  }
+  function splitWords(el) {
+    if (el._words) return el._words;
+    const out = [];
+    const walk = node => {
+      [...node.childNodes].forEach(n => {
+        if (n.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach(part => {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+            const sEl = document.createElement('span'); sEl.className = 'sd-word'; sEl.textContent = part;
+            const g = n.parentElement.closest('.grad,.grad-warm,.grad-cool');
+            if (g && el.contains(g)) sEl.classList.add([...g.classList].find(c => c.startsWith('grad')));
+            frag.appendChild(sEl); out.push(sEl);
+          });
+          n.replaceWith(frag);
+        } else if (n.nodeType === 1 && n.tagName !== 'BR') walk(n);
+      });
+    };
+    walk(el);
+    el.querySelectorAll('.grad,.grad-warm,.grad-cool').forEach(g => { if (g.querySelector('.sd-word')) g.classList.remove('grad', 'grad-warm', 'grad-cool'); });
+    return (el._words = out);
+  }
+
+  function splitChars(el) {
+    if (el._chars) return el._chars;
+    const out = [];
+    const walk = node => [...node.childNodes].forEach(n => {
+      if (n.nodeType === 3) { const f = document.createDocumentFragment(); [...n.textContent].forEach(ch => { if (/\s/.test(ch)) { f.appendChild(document.createTextNode(ch)); return; } const c = document.createElement('span'); c.className = 'sd-char'; c.textContent = ch; f.appendChild(c); out.push(c); }); n.replaceWith(f); }
+      else if (n.nodeType === 1 && !n.classList.contains('sd-bokeh')) walk(n);
+    });
+    walk(el);
+    return (el._chars = out);
+  }
+  function bokehOpen(el, o) {
+    const chars = splitChars(el); el.style.opacity = 1;
+    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    let disc = el._disc;
+    if (!disc) { disc = document.createElement('span'); disc.className = 'sd-bokeh'; disc.innerHTML = '<i></i><i></i>'; el.appendChild(disc); el._disc = disc; }
+    if (o.instant || REDUCE) { disc.style.opacity = 0; return; }
+    const seed = clamp(+(el.dataset.seed || 0), 0, chars.length - 1), c = chars[seed];
+    const size = el.offsetHeight * 1.25;
+    Object.assign(disc.style, { left: (c.offsetLeft + c.offsetWidth / 2) + 'px', top: (c.offsetTop + c.offsetHeight / 2) + 'px', width: size + 'px', height: size + 'px' });
+    const d0 = o.delay || 0;
+    play(disc, t => { const sc = t < .07 ? ease.out(t / .07) : t < .37 ? 1 : 1 - ease.in(clamp((t - .37) / .16)); return { opacity: t < .54 ? 1 : 0, transform: `translate(-50%,-50%) scale(${Math.max(.02, sc).toFixed(3)})` }; }, .56, { delay: d0, keep: true });
+    disc.querySelectorAll('i').forEach((sp_, k) => play(sp_, t => ({ opacity: t < .53 ? 0 : 1 - clamp((t - .9) / .2), transform: `translate(${k ? 26 : -18}px, ${k ? -12 : 10}px)` }), 1.1, { delay: d0, keep: true }));
+    chars.forEach((ch, i) => play(ch, t => ({ opacity: ease.out(clamp(t / .3)), filter: blurIn(t, 12, .35), textShadow: `${(-5 * (1 - clamp(t / .35))).toFixed(1)}px 0 rgba(255,80,170,${(.7 * (1 - clamp(t / .35))).toFixed(2)}), ${(5 * (1 - clamp(t / .35))).toFixed(1)}px 0 rgba(80,170,255,${(.7 * (1 - clamp(t / .35))).toFixed(2)})` }), .38, { delay: d0 + 560 + Math.abs(i - seed) * 40 }));
+    return null;
+  }
+  function smearOut(el) {
+    const chars = splitChars(el).slice().reverse();
+    chars.forEach((ch, i) => play(ch, t => { const k = ease.out(clamp(t / .2)); return { opacity: 1 - k, transform: `scaleX(${(1 + .15 * k).toFixed(3)})`, filter: `blur(${(6 * k).toFixed(2)}px)`, textShadow: `${(-12 * k).toFixed(1)}px 0 currentColor, ${(12 * k).toFixed(1)}px 0 currentColor` }; }, .22, { delay: i * 70, keep: true }));
+    return chars.length * 70 + 220;
+  }
+  function chatPlay(el, o) {
+    el.style.opacity = 1;
+    const items = [...el.children], d0 = o.delay || 0;
+    items.forEach(it => { cancelAnims(it); it.classList.remove('is-shown'); it.style.transform = ''; });
+    if (o.instant || REDUCE) { items.forEach(it => { if (!it.dataset.hideAt) it.classList.add('is-shown'); }); return; }
+    const show = (it, on) => {
+      const vis = items.filter(x => x.classList.contains('is-shown')), r0 = new Map(vis.map(x => [x, x.getBoundingClientRect().top]));
+      it.classList.toggle('is-shown', on);
+      const k = stageScale || 1, s = sp('snappy');
+      vis.forEach(x => { if (x === it) return; const dy = (r0.get(x) - x.getBoundingClientRect().top) / k; if (Math.abs(dy) > .5) play(x, t => ({ transform: `translate3d(0,${(dy * (1 - s.f(t))).toFixed(2)}px,0)` }), s.T, {}); });
+      if (on) (FX[it.dataset.anim || (el.classList.contains('is-phone') ? 'rise' : 'ui')] || FX.ui)(it, { dist: 10, spring: 'smooth' });
+    };
+    items.forEach(it => {
+      later(el, d0 + +(it.dataset.at || 0), () => show(it, true));
+      if (it.dataset.hideAt) later(el, d0 + +it.dataset.hideAt, () => show(it, false));
+    });
+    return null;
+  }
+  function setupCam(cam) {
+    const map = {}; (cam.dataset.cam || '').split('|').forEach(p => { const m = p.trim().match(/^(\d+)\s*:\s*([\d.]+)%?\s+([\d.]+)%?\s+([\d.]+)$/); if (m) map[+m[1]] = [+m[2] / 100, +m[3] / 100, +m[4]]; });
+    const keys = Object.keys(map).map(Number).sort((a, b) => a - b);
+    const target = st => { let v = [.5, .5, 1]; keys.forEach(k => { if (k <= st) v = map[k]; }); return v; };
+    const tf = (v, W, H) => { const [px, py, sc] = v; return [clamp(W / 2 - px * W * sc, W - W * sc, 0), clamp(H / 2 - py * H * sc, H - H * sc, 0), sc]; };
+    let cur = null;
+    const apply = (st, inst) => {
+      const W = cam.offsetWidth, H = cam.offsetHeight, to = tf(target(st), W, H), from = cur || to;
+      cancelAnims(cam); cur = to;
+      const css = v => `translate3d(${v[0].toFixed(1)}px,${v[1].toFixed(1)}px,0) scale(${v[2].toFixed(4)})`;
+      if (inst || (from[0] === to[0] && from[1] === to[1] && from[2] === to[2])) { play(cam, () => ({ transform: css(to) }), .05, { keep: true, instant: true }); cam.style.transform = css(to); return; }
+      const s = sp(cam.dataset.spring || 'heavy');
+      play(cam, t => { const k = s.f(t), v = [0, 1, 2].map(i => lerp(from[i], to[i], k)); return { transform: css(v), filter: `blur(${(Math.sin(Math.PI * clamp(t / (s.T * .55))) * Math.min(8, Math.abs(to[2] - from[2]) * 5)).toFixed(2)}px)` }; }, s.T, { keep: true });
+    };
+    cam.style.transformOrigin = '0 0';
+    return { max: keys.length ? keys[keys.length - 1] : 0, enter(st, inst) { cur = null; apply(st, true); }, step(st, dir, inst) { apply(st, inst); }, reset() { cancelAnims(cam); cur = null; } };
+  }
+  function Flythrough(box, slide) {
+    const cards = [...box.children];
+    return () => {
+      const t = (performance.now() - (slide._enteredAt || performance.now())) / 1000;
+      cards.forEach(c => { const z = +(c.dataset.z || 1), v = +(box.dataset.speed || 34) * (.6 + z * .45); c.style.translate = `${(-v * t).toFixed(1)}px 0`; });
+      box.style.scale = (1 + Math.min(.15, t * .025)).toFixed(4);
+    };
+  }
+
+  /* -------------------------------------------------------- dot-matrix text */
+  function setupDotText(el) {
+    if (el._dot) return el._dot;
+    const text = el.textContent.trim();
+    el.textContent = '';
+    const wrap = document.createElement('span'); wrap.className = 'sd-dottext';
+    const fill = document.createElement('span'); fill.className = 'sd-dottext__fill'; fill.textContent = text;
+    const stroke = document.createElement('span'); stroke.className = 'sd-dottext__stroke'; stroke.textContent = text; stroke.setAttribute('aria-hidden', 'true');
+    const cv = document.createElement('canvas');
+    wrap.append(fill, stroke, cv); el.append(wrap);
+    return (el._dot = { wrap, fill, stroke, cv, text, pts: null });
+  }
+  function sampleDots(d) {
+    const cs = getComputedStyle(d.fill), w = Math.ceil(d.fill.offsetWidth), h = Math.ceil(d.fill.offsetHeight), fs = parseFloat(cs.fontSize);
+    const oc = document.createElement('canvas'); oc.width = w; oc.height = h;
+    const ctx = oc.getContext('2d', { willReadFrequently: true });
+    ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${fs}px ${cs.fontFamily}`;
+    try { if ('letterSpacing' in ctx) ctx.letterSpacing = cs.letterSpacing; } catch (e) { /* older browsers */ }
+    const m = ctx.measureText(d.text), sx = m.width ? w / m.width : 1;
+    const asc = m.fontBoundingBoxAscent || fs * .82, desc = m.fontBoundingBoxDescent || fs * .22;
+    ctx.setTransform(sx, 0, 0, 1, 0, 0); ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#000';
+    ctx.fillText(d.text, 0, (h - (asc + desc)) / 2 + asc);
+    const data = ctx.getImageData(0, 0, w, h).data, gap = Math.max(6, Math.round(fs / 10)), pts = [];
+    const A = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : data[((y | 0) * w + (x | 0)) * 4 + 3];
+    const st = gap * .55, nb = gap * .55, taken = [];
+    for (let y = st / 2; y < h; y += st) for (let x = st / 2; x < w; x += st) {
+      if (A(x, y) < 110) continue;
+      if (A(x - nb, y) > 110 && A(x + nb, y) > 110 && A(x, y - nb) > 110 && A(x, y + nb) > 110) continue; // interior
+      if (taken.some(q => Math.abs(q.x - x) < gap * .8 && Math.abs(q.y - y) < gap * .8)) continue;
+      const q = { x, y }; taken.push(q); pts.push(q);
+    }
+    pts.forEach(p => { const u = p.x / w; p.t0 = .02 + u * .42 + rand(0, .1); p.ox = 0; p.tOut = .86 + u * .5 + rand(0, .06); if (Math.random() < .08) { p.ox = rand(30, 90); p.t0 -= .06; } p.hue = rand(-8, 8); });
+    d.pts = pts; d.gap = gap; d.w = w; d.h = h;
+  }
+  function dotText(el, o) {
+    const d = setupDotText(el);
+    el.style.opacity = 1;
+    const finish = () => { d.wrap.style.setProperty('--sd-ps', '130%'); d.wrap.style.setProperty('--sd-pf', '130%'); d.wrap.classList.add('is-done'); const c = d.cv.getContext('2d'); c && c.clearRect(0, 0, d.cv.width, d.cv.height); };
+    d.wrap.classList.remove('is-done');
+    if (o.instant || REDUCE) { finish(); return; }
+    d.wrap.style.setProperty('--sd-ps', '-15%'); d.wrap.style.setProperty('--sd-pf', '-15%');
+    const startAt = performance.now() + (o.delay || 0);
+    const run = () => {
+      if (!d.pts || d.w !== Math.ceil(d.fill.offsetWidth)) sampleDots(d);
+      const pad = 100, dpr = Math.min(2, window.devicePixelRatio || 1) * Math.max(.5, stageScale);
+      const cw = d.w + pad * 2, ch = d.h + pad * 2;
+      Object.assign(d.cv.style, { left: -pad + 'px', top: -pad + 'px', width: cw + 'px', height: ch + 'px' });
+      d.cv.width = Math.round(cw * dpr); d.cv.height = Math.round(ch * dpr);
+      const ctx = d.cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, pad * dpr, pad * dpr);
+      const R = d.gap * .4, pop = spring(.34, .42), color = getComputedStyle(el).getPropertyValue('--dot-color').trim() || '#ff8a3a';
+      const frame = now => {
+        const t = (now - startAt) / 1000;
+        if (t < 0) { el._raf = requestAnimationFrame(frame); return; }
+        d.wrap.style.setProperty('--sd-ps', lerp(-12, 112, ease.inOut(clamp((t - .34) / .56))).toFixed(2) + '%');
+        d.wrap.style.setProperty('--sd-pf', lerp(-12, 116, ease.out(clamp((t - .8) / .62))).toFixed(2) + '%');
+        ctx.clearRect(-pad, -pad, cw, ch);
+        ctx.fillStyle = color; ctx.beginPath();
+        for (const p of d.pts) {
+          if (t < p.t0) continue;
+          const k = t - p.t0, s = pop.f(k), out = t > p.tOut ? 1 - ease.out(clamp((t - p.tOut) / .22)) : 1, r = R * s * out;
+          if (r < .15) continue;
+          const x = p.x + p.ox * (1 - ease.expo(clamp(k / .5)));
+          ctx.moveTo(x + r, p.y); ctx.arc(x, p.y, r, 0, Math.PI * 2);
+        }
+        ctx.fill();
+        if (t < 1.75) el._raf = requestAnimationFrame(frame); else finish();
+      };
+      el._raf = requestAnimationFrame(frame);
+    };
+    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(run);
+    return null;
+  }
+
+  /* ------------------------------------------------- particle assemble */
+  function assemble(el, o) {
+    el.style.opacity = 1;
+    let cv = el._asmCv;
+    const target = el.querySelector('img,svg') || el;
+    if (!cv) {
+      cv = el._asmCv = document.createElement('canvas'); cv.className = 'sd-assemble';
+      if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+      el.appendChild(cv);
+    }
+    const kids = [...el.children].filter(c => c !== cv);
+    const solid = v => kids.forEach(k => { k.style.opacity = v; });
+    const textNodes = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
+    if (textNodes.length && !el._asmWrapped) { const sEl = document.createElement('span'); sEl.className = 'sd-assemble__text'; textNodes.forEach(n => sEl.appendChild(n)); el.insertBefore(sEl, cv); el._asmWrapped = sEl; kids.push(sEl); }
+    if (o.instant || REDUCE) { solid(''); const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); return; }
+    solid(0);
+    const run = async () => {
+      const w = Math.ceil(el.offsetWidth), h = Math.ceil(el.offsetHeight);
+      if (!el._asmPts || el._asmW !== w) {
+        const oc = document.createElement('canvas'); oc.width = w; oc.height = h;
+        const ctx = oc.getContext('2d', { willReadFrequently: true });
+        let img = el.querySelector('img'), box = null;
+        const svg = el.querySelector('svg');
+        const er = el.getBoundingClientRect(), k = er.width / Math.max(1, el.offsetWidth);
+        if (svg && !img) {
+          const r = svg.getBoundingClientRect(), c = svg.cloneNode(true); c.style.opacity = '';
+          c.setAttribute('width', r.width / k); c.setAttribute('height', r.height / k); c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+          img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(c));
+          try { await img.decode(); } catch (e) { img = null; }
+          box = [(r.left - er.left) / k, (r.top - er.top) / k, r.width / k, r.height / k];
+        } else if (img) { const r = img.getBoundingClientRect(); box = [(r.left - er.left) / k, (r.top - er.top) / k, r.width / k, r.height / k]; }
+        const drawText = () => { const t = el._asmWrapped || el, cs = getComputedStyle(t); ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; try { ctx.letterSpacing = cs.letterSpacing; } catch (e) { } ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t.textContent.trim(), w / 2, h / 2 + parseFloat(cs.fontSize) * .04); };
+        try { if (img && img.complete && box) ctx.drawImage(img, ...box); else drawText(); } catch (e) { drawText(); }
+        let data; try { data = ctx.getImageData(0, 0, w, h).data; } catch (e) { solid(''); return; }
+        const gap = Math.max(5, Math.round(Math.min(w, h) / (+(el.dataset.density || 54)))), pts = [];
+        const pal = COLORS(), cols = (el.dataset.colors || 'blue,violet,green,orange,cyan,white').split(',').map(c => pal[c.trim()] || c.trim());
+        for (let y = gap / 2; y < h; y += gap) for (let x = gap / 2; x < w; x += gap) if (data[((y | 0) * w + (x | 0)) * 4 + 3] > 90) {
+          const a0 = rand(0, 6.283), r0 = el.dataset.from === 'center' ? rand(0, 24) : rand(380, 1100);
+          pts.push({ x, y, a0, r0, d: rand(0, .35), c: cols[(Math.random() * cols.length) | 0], s: rand(.7, 1.3) });
+        }
+        el._asmPts = pts; el._asmW = w; el._asmH = h; el._asmGap = gap;
+      }
+      const pts = el._asmPts, gap = el._asmGap, pad = 900, dpr = Math.min(2, window.devicePixelRatio || 1) * Math.max(.5, stageScale);
+      const cw = w + pad * 2, ch = h + pad * 2;
+      Object.assign(cv.style, { left: -pad + 'px', top: -pad + 'px', width: cw + 'px', height: ch + 'px' });
+      cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+      const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, pad * dpr, pad * dpr);
+      const cx = w / 2, cy = h / 2, D = +(el.dataset.duration || 2000) / 1000, startAt = performance.now() + (o.delay || 0);
+      const frame = now => {
+        const t = (now - startAt) / 1000;
+        if (t < 0) { el._raf = requestAnimationFrame(frame); return; }
+        ctx.clearRect(-pad, -pad, cw, ch);
+        const fadeSolid = clamp((t - D) / .5);
+        for (const p of pts) {
+          const k = ease.out5(clamp((t - p.d) / (D - .35)));
+          const a1 = Math.atan2(p.y - cy, p.x - cx), r1 = Math.hypot(p.x - cx, p.y - cy);
+          const ang = lerp(p.a0, a1 + (a1 < p.a0 ? 6.283 : 0), k) - (1 - k) * 2.2, r = lerp(p.r0, r1, k);
+          const x = cx + Math.cos(ang) * r, y = cy + Math.sin(ang) * r;
+          ctx.globalAlpha = clamp(t * 3) * (1 - fadeSolid) * (.55 + .45 * k);
+          ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(x, y, gap * .4 * p.s * (1.5 - .6 * k), 0, 6.283); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        solid(fadeSolid.toFixed(3));
+        if (t < D + .55) el._raf = requestAnimationFrame(frame); else { ctx.clearRect(-pad, -pad, cw, ch); solid(''); }
+      };
+      el._raf = requestAnimationFrame(frame);
+    };
+    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(run);
+    return null;
+  }
+
+  /* ---------------------------------------------------------- carousel */
+  function setupCarousel(car) {
+    const items = [...car.children];
+    const set = (i, inst) => items.forEach((it, j) => {
+      if (inst) it.style.transition = 'none';
+      it.classList.toggle('is-cur', j === i); it.classList.toggle('is-prev', j === i - 1);
+      it.classList.toggle('is-next', j > i); it.classList.toggle('is-far', j < i - 1);
+      if (inst) { void it.offsetWidth; it.style.transition = ''; }
+    });
+    return { max: items.length - 1, enter(step, inst) { set(clamp(step, 0, items.length - 1), true); }, step(step, dir, inst) { set(clamp(step, 0, items.length - 1), inst); }, reset() { } };
+  }
+
+  /* ---------------------------------------------------------- dot faces */
+  function setupFace(dot) {
+    if (dot.querySelector('i')) return;
+    const face = (dot.dataset.face || 'o o').split(' ');
+    dot.innerHTML = face.map(c => `<i>${c}</i>`).join('');
+  }
+  function wink(dot, ms = 400) {
+    const eyes = dot.querySelectorAll('i'); if (eyes.length < 2) return;
+    const e = eyes[eyes.length - 1], prev = e.textContent;
+    e.textContent = '<'; e.style.transform = 'rotate(-6deg) scale(1.05)';
+    setTimeout(() => { e.textContent = prev; e.style.transform = ''; }, ms);
+  }
+  function blinkLoop(slide) {
+    const dots = [...slide.querySelectorAll('.sd-dot')];
+    if (!dots.length) return () => {};
+    let alive = true;
+    const one = d => { if (!alive) return; d.classList.add('is-blink'); setTimeout(() => d.classList.remove('is-blink'), 130); setTimeout(() => one(d), rand(2400, 5200)); };
+    dots.forEach(d => setTimeout(() => one(d), rand(900, 3200)));
+    return () => { alive = false; };
+  }
+
+  /* ------------------------------------------------------------ tickers */
+  const tickers = new Set();
+  let last = performance.now();
+  function loop(now) { const dt = Math.min(.05, (now - last) / 1000); last = now; tickers.forEach(fn => fn(dt, now)); requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+
+  /* starfield on the persistent background */
+  function Stars(cv, stage) {
+    const ctx = cv.getContext('2d'), N = 420, stars = [];
+    let dpr = 1, warp = 0;
+    const reset = (s, init) => { s.x = rand(0, W); s.y = rand(0, H); s.z = Math.pow(Math.random(), 2.2); s.tw = rand(0, 6.28); s.r = .4 + s.z * 1.5; if (!init) { s.x = W / 2 + rand(-80, 80); s.y = H / 2 + rand(-50, 50); } };
+    for (let i = 0; i < N; i++) { const s = {}; reset(s, true); if (i < 16) { s.z = 1; s.r = rand(2.4, 4.6); s.big = true; } stars.push(s); }
+    const size = () => { dpr = Math.min(2, window.devicePixelRatio || 1) * Math.max(.5, stageScale); cv.width = W * dpr; cv.height = H * dpr; };
+    size(); window.addEventListener('resize', size);
+    return function tick(dt, now) {
+      const on = stage.classList.contains('bg-stars') || stage.classList.contains('bg-warp');
+      if (!on && !cv._fading) return;
+      warp = lerp(warp, stage.classList.contains('bg-warp') ? 1 : 0, 1 - Math.pow(.02, dt));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+      for (const s of stars) {
+        s.tw += dt * (1 + s.z * 2);
+        const vx = -(6 + s.z * 22) * (1 - warp);
+        let dx = s.x - W / 2, dy = s.y - H / 2;
+        const k = warp * (0.4 + s.z * 2.8) * dt;
+        const px = s.x, py = s.y;
+        s.x += vx * dt + dx * k; s.y += dy * k;
+        if (s.x < -20) s.x = W + 20;
+        if (s.x > W + 40 || s.y < -40 || s.y > H + 40) reset(s, warp < .2);
+        const a = (.25 + .75 * s.z) * (.65 + .35 * Math.sin(s.tw));
+        ctx.globalAlpha = a; ctx.fillStyle = '#fff';
+        if (warp > .05) { ctx.strokeStyle = '#fff'; ctx.lineWidth = s.r; ctx.beginPath(); ctx.moveTo(px - dx * k * 6 * warp, py - dy * k * 6 * warp); ctx.lineTo(s.x, s.y); ctx.stroke(); }
+        else { ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283); ctx.fill(); if (s.big) { const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 5); g.addColorStop(0, 'rgba(255,255,255,.22)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.globalAlpha = a; ctx.fillStyle = g; ctx.fillRect(s.x - s.r * 5, s.y - s.r * 5, s.r * 10, s.r * 10); ctx.fillStyle = '#fff'; } }
+      }
+      ctx.globalAlpha = 1;
+    };
+  }
+
+  /* spiral galaxy canvas (bento micro-loop) */
+  function Spiral(cv) {
+    const ctx = cv.getContext('2d'), N = +(cv.dataset.count || 1400), arms = +(cv.dataset.arms || 3), P = [];
+    for (let i = 0; i < N; i++) { const r = Math.pow(Math.random(), .75); P.push({ r, a: (i % arms) * 6.283 / arms + r * 5.4 + rand(-.45, .45) * (1 - r * .3), s: rand(.6, 1.8), al: rand(.3, 1) }); }
+    let rot = 0;
+    return dt => {
+      const w = cv.offsetWidth, h = cv.offsetHeight; if (!w) return;
+      const dpr = Math.min(2, window.devicePixelRatio || 1) * Math.max(.5, stageScale);
+      if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+      rot += dt * .22;
+      const cx = w / 2, cy = h / 2, R = Math.min(w, h) * .62;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * .35); g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#fff';
+      for (const p of P) { const a = p.a + rot * (1.7 - p.r); ctx.globalAlpha = p.al * (1 - p.r * .55); ctx.fillRect(cx + Math.cos(a) * p.r * R, cy + Math.sin(a) * p.r * R * .64, p.s, p.s); }
+      ctx.globalAlpha = 1;
+    };
+  }
+
+  /* --------------------------------------------------------------- charts */
+  const COLORS = () => { const cs = getComputedStyle(root); const c = n => cs.getPropertyValue('--sd-' + n).trim(); return { blue: c('blue'), cyan: c('cyan'), green: c('green'), orange: c('orange'), red: c('red'), violet: c('violet'), lav: c('lav'), yellow: c('yellow'), white: c('white') }; };
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const svgEl = (tag, attrs, parent) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+  function buildChart(el) {
+    if (el._chart) return el._chart;
+    const type = el.dataset.type || 'line', pal = COLORS();
+    const series = (el.dataset.values || '').split('|').map(s => s.split(',').map(Number));
+    const labels = (el.dataset.labels || '').split(',').filter(Boolean);
+    const colors = (el.dataset.colors || el.dataset.color || 'blue').split(',').map(c => pal[c.trim()] || c.trim());
+    const hi = el.dataset.highlight !== undefined ? +el.dataset.highlight : -1;
+    const pre = el.dataset.prefix || '', suf = el.dataset.suffix || '';
+    const w = el.offsetWidth || 900, h = el.offsetHeight || 500;
+    const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}` }, el);
+    const max = +(el.dataset.max || Math.max(...series.flat()) * 1.12), min = +(el.dataset.min || 0);
+    const parts = { draw: [], pop: [], bars: [], fade: [], wipe: [] };
+    if (type === 'stack') {
+      const n = series[0].length, padB = labels.length ? 56 : 16, top = 24, cum = [];
+      series.forEach((vals, si) => cum.push(vals.map((v, i) => v + (si ? cum[si - 1][i] : 0))));
+      const mx = +(el.dataset.max || Math.max(...cum[cum.length - 1]) * 1.08);
+      const X = i => w * i / (n - 1), Y = v => h - padB - v / mx * (h - padB - top);
+      const line = (vals, rev) => { const P = vals.map((v, i) => [X(i), Y(v)]); if (rev) P.reverse(); let d = ''; P.forEach((p, i) => { if (!i) { d += (rev ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); return; } const p0 = P[i - 2] || P[i - 1], p1 = P[i - 1], p3 = P[i + 1] || p; const c1 = [p1[0] + (p[0] - p0[0]) / 6, p1[1] + (p[1] - p0[1]) / 6], c2 = [p[0] - (p3[0] - p1[0]) / 6, p[1] - (p3[1] - p1[1]) / 6]; d += `C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`; }); return d; };
+      const scol = (el.dataset.colors || '#6e7ce8,#44d3e8,#fccb86,#7fe0b5').split(',').map(c => pal[c.trim()] || c.trim());
+      const cid = 'c' + Math.random().toString(36).slice(2, 7), defs = svgEl('defs', {}, svg), cp = svgEl('clipPath', { id: cid }, defs);
+      const cr = svgEl('rect', { x: 0, y: 0, width: w, height: h }, cp); cr.style.transformBox = 'view-box'; cr.style.transformOrigin = '0 0'; parts.wipe.push(cr);
+      const g = svgEl('g', { 'clip-path': `url(#${cid})` }, svg);
+      for (let si = cum.length - 1; si >= 0; si--) {
+        const lower = si ? cum[si - 1] : cum[0].map(() => 0);
+        svgEl('path', { d: line(cum[si]) + ' ' + line(lower, true) + ' Z', fill: scol[si % scol.length], opacity: .95 }, g);
+      }
+      labels.forEach((l, i) => { const t = svgEl('text', { x: X(Math.round(i * (n - 1) / Math.max(1, labels.length - 1))), y: h - 14, 'text-anchor': i === 0 ? 'start' : i === labels.length - 1 ? 'end' : 'middle' }, svg); t.textContent = l; parts.fade.push(t); });
+    } else if (type === 'bar') {
+      const vals = series[0], n = vals.length, padB = 60, top = 50, slot = w / n, bw = Math.min(150, slot * .56);
+      vals.forEach((v, i) => {
+        const bh = (v - min) / (max - min) * (h - padB - top), x = slot * i + (slot - bw) / 2, y = h - padB - bh;
+        const col = hi === -1 || hi === i ? (colors[i] || colors[0]) : 'rgba(255,255,255,.16)';
+        const g = svgEl('g', {}, svg);
+        const r = svgEl('rect', { x, y, width: bw, height: bh, rx: 12, fill: col }, g);
+        r.style.transformOrigin = `${x + bw / 2}px ${h - padB}px`; r.style.transformBox = 'view-box';
+        parts.bars.push(r);
+        const t = svgEl('text', { x: x + bw / 2, y: y - 18, 'text-anchor': 'middle', class: 'val' }, g); t.textContent = pre + v + suf; parts.pop.push(t);
+        if (hi !== -1 && hi !== i) t.style.fill = 'var(--sd-ink-3)';
+        if (labels[i]) { const l = svgEl('text', { x: x + bw / 2, y: h - padB + 40, 'text-anchor': 'middle' }, g); l.textContent = labels[i]; parts.fade.push(l); }
+      });
+      svgEl('line', { x1: 0, x2: w, y1: h - padB, y2: h - padB, class: 'grid' }, svg);
+    } else {
+      const padL = 10, padB = labels.length ? 56 : 16, top = 40, n = series[0].length;
+      for (let g = 0; g <= 4; g++) { const y = top + (h - padB - top) * g / 4; const ln = svgEl('line', { x1: padL, x2: w, y1: y, y2: y, class: 'grid' }, svg); parts.fade.push(ln); }
+      const X = i => padL + (w - padL - 20) * i / (n - 1), Y = v => h - padB - (v - min) / (max - min) * (h - padB - top);
+      for (let q = 0; q < +(el.dataset.scatter || 0); q++) { const c = svgEl('circle', { cx: rand(padL, w - 20), cy: rand(top, h - padB), r: rand(1.5, 3.2), fill: 'rgba(255,255,255,.16)' }, svg); parts.fade.push(c); }
+      series.forEach((vals, si) => {
+        const col = series.length > 1 && hi !== -1 && hi !== si ? 'rgba(255,255,255,.35)' : (colors[si] || colors[0]);
+        const d = vals.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1)).join(' ');
+        if (si === (hi === -1 ? series.length - 1 : hi) && el.dataset.area !== 'false') {
+          const id = 'g' + Math.random().toString(36).slice(2, 7), defs = svgEl('defs', {}, svg), lg = svgEl('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+          svgEl('stop', { offset: 0, 'stop-color': col, 'stop-opacity': .28 }, lg); svgEl('stop', { offset: 1, 'stop-color': col, 'stop-opacity': 0 }, lg);
+          const area = svgEl('path', { d: d + ` L${X(n - 1)} ${h - padB} L${X(0)} ${h - padB} Z`, fill: `url(#${id})` }, svg); parts.fade.push(area);
+        }
+        const p = svgEl('path', { d, fill: 'none', stroke: col, 'stroke-width': series.length > 1 && hi !== si ? 3 : 5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, svg);
+        parts.draw.push(p);
+        if (si === (hi === -1 ? series.length - 1 : hi)) {
+          const c = svgEl('circle', { cx: X(n - 1), cy: Y(vals[n - 1]), r: 11, fill: col }, svg); c.style.transformOrigin = `${X(n - 1)}px ${Y(vals[n - 1])}px`; c.style.transformBox = 'view-box'; parts.pop.push(c);
+          if (el.dataset.endLabel !== 'false') { const t = svgEl('text', { x: X(n - 1) - 20, y: Y(vals[n - 1]) - 26, 'text-anchor': 'end', class: 'val' }, svg); t.textContent = pre + vals[n - 1] + suf; parts.pop.push(t); }
+        }
+      });
+      labels.forEach((l, i) => { const t = svgEl('text', { x: X(Math.round(i * (n - 1) / Math.max(1, labels.length - 1))), y: h - 14, 'text-anchor': i === 0 ? 'start' : i === labels.length - 1 ? 'end' : 'middle' }, svg); t.textContent = l; parts.fade.push(t); });
+    }
+    return (el._chart = parts);
+  }
+  FX.chart = (el, o) => {
+    const c = buildChart(el), d0 = o.delay || 0, inst = o.instant;
+    el.style.opacity = 1;
+    c.fade.forEach(n => play(n, t => ({ opacity: ease.out(clamp(t / .6)) }), .6, { delay: d0, instant: inst }));
+    const DD = +(el.dataset.duration || 1500) / 1000;
+    c.draw.forEach((p, i) => { const L = p.getTotalLength(); p.style.strokeDasharray = L; play(p, t => ({ strokeDashoffset: (L * (1 - (DD > 3 ? clamp(t / DD) : ease.inOut(clamp(t / DD))))).toFixed(1) }), DD, { delay: d0 + 200 + i * 150, instant: inst }); });
+    c.wipe.forEach(r => play(r, t => ({ transform: `scaleX(${ease.inOut(clamp(t / DD)).toFixed(4)})` }), DD, { delay: d0 + 150, instant: inst, keep: true }));
+    const bs = sp('chewy');
+    c.bars.forEach((b, i) => play(b, t => ({ transform: `scaleY(${Math.max(0, bs.f(t)).toFixed(4)})` }), bs.T, { delay: d0 + 150 + i * 110, instant: inst }));
+    const popAt = c.bars.length ? 350 + c.bars.length * 110 : 200 + DD * 1000;
+    c.pop.forEach((n, i) => FX.pop(n, { delay: d0 + popAt + i * 60, instant: inst }));
+  };
+
+  /* --------------------------------------------------------- quote cloud */
+  function setupCloud(cloud) {
+    const sets = [...cloud.querySelectorAll(':scope > [data-set]')].sort((a, b) => +a.dataset.set - +b.dataset.set);
+    sets.forEach(set => set.querySelectorAll('.sd-qcard').forEach(c => { const z = +(c.dataset.z || 0); c.style.zIndex = 10 - z; }));
+    let cur = -1;
+    const end = z => ({ opacity: 1 - z * .26, transform: `translate3d(0,0,0) scale(${1 - z * .07})`, filter: `blur(${z * 5}px)` });
+    const show = (set, dir, inst) => {
+      set.style.visibility = '';
+      const s = sp('soft');
+      [...set.querySelectorAll('.sd-qcard')].forEach((c, i) => {
+        cancelAnims(c); const z = +(c.dataset.z || 0), e = end(z), from = (dir >= 0 ? 1 : -1) * (190 + z * 90);
+        play(c, t => { const k = s.f(t); return { opacity: lerp(0, e.opacity, ease.out(clamp(t / .45))), transform: `translate3d(0,${((1 - k) * from).toFixed(1)}px,0) scale(${lerp(1 - z * .07 + .04, 1 - z * .07, k).toFixed(4)})`, filter: `blur(${lerp(22, z * 5, ease.expo(clamp(t / .7))).toFixed(2)}px)` }; }, s.T, { delay: i * 45, keep: true, instant: inst });
+      });
+      set.querySelectorAll('.sd-cloud__label').forEach(l => { cancelAnims(l); l.style.opacity = ''; FX.rise(l, { delay: 260, instant: inst }); });
+    };
+    const hide = (set, dir, inst) => {
+      const s = sp('smooth');
+      set.querySelectorAll('.sd-cloud__label').forEach(l => { cancelAnims(l); play(l, t => ({ opacity: 1 - ease.out(clamp(t / .2)), filter: `blur(${t * 30}px)` }), .25, { keep: true, instant: inst }); });
+      [...set.querySelectorAll('.sd-qcard')].forEach((c, i) => {
+        cancelAnims(c); const z = +(c.dataset.z || 0), e = end(z), to = -(dir >= 0 ? 1 : -1) * (150 + z * 120);
+        play(c, t => { const k = s.f(t); return { opacity: lerp(e.opacity, 0, ease.out(clamp(t / .5))), transform: `translate3d(0,${(k * to).toFixed(1)}px,0) scale(${1 - z * .07})`, filter: `blur(${lerp(z * 5, 18 + z * 6, k).toFixed(2)}px)` }; }, s.T, { delay: i * 25, keep: true, instant: inst });
+      });
+    };
+    return {
+      max: sets.length - 1,
+      enter(step, inst) { sets.forEach(s => { s.style.visibility = 'hidden'; s.querySelectorAll('.sd-qcard,.sd-cloud__label').forEach(n => { cancelAnims(n); n.style.opacity = 0; }); }); cur = clamp(step, 0, sets.length - 1); show(sets[cur], 1, inst); },
+      step(step, dir, inst) { const nx = clamp(step, 0, sets.length - 1); if (nx === cur) return; hide(sets[cur], dir, inst); show(sets[nx], dir, inst); cur = nx; },
+      reset() { sets.forEach(s => { s.style.visibility = ''; s.querySelectorAll('.sd-qcard,.sd-cloud__label').forEach(n => { cancelAnims(n); n.style.opacity = ''; }); }); cur = -1; },
+    };
+  }
+
+  /* ------------------------------------------------------------- deck */
+  let stageScale = 1;
+  const deck = document.querySelector('.deck');
+  if (!deck) { console.warn('[StageDeck] no .deck element'); return; }
+  const viewport = document.createElement('div'); viewport.className = 'sd-viewport';
+  const stage = document.createElement('div'); stage.className = 'sd-stage';
+  stage.innerHTML = '<div class="sd-bg"><div class="sd-bg__base"></div><canvas class="sd-bg__stars"></canvas><div class="sd-glow sd-glow--top"></div><div class="sd-glow sd-glow--left"></div><div class="sd-glow sd-glow--horizon"></div><div class="sd-bg__white"></div><div class="sd-bg__grain"></div><div class="sd-dip"></div></div>';
+  deck.parentNode.insertBefore(viewport, deck); viewport.appendChild(stage); stage.appendChild(deck);
+  const progress = document.createElement('div'); progress.className = 'sd-progress'; document.body.appendChild(progress);
+  const counter = document.createElement('div'); counter.className = 'sd-counter'; document.body.appendChild(counter);
+
+  function fit() {
+    if (document.body.classList.contains('is-overview')) { stage.style.transform = ''; stage.style.zoom = (innerWidth / (4 * W + 3 * 80 + 160)).toFixed(4); return; }
+    stage.style.zoom = '';
+    stageScale = Math.min(innerWidth / W, innerHeight / H);
+    stage.style.transform = `scale(${stageScale})`;
+  }
+  fit(); window.addEventListener('resize', fit);
+  tickers.add(Stars(stage.querySelector('.sd-bg__stars'), stage));
+
+  const slides = [...deck.querySelectorAll(':scope > .slide, :scope > section')];
+  slides.forEach(s => s.classList.add('slide'));
+
+  /* per-slide preparation */
+  slides.forEach(slide => {
+    slide.querySelectorAll('[data-anim-children]').forEach(p => [...p.children].forEach(c => { if (!c.dataset.anim) c.dataset.anim = p.dataset.animChildren; }));
+    slide.querySelectorAll('.sd-dot').forEach(setupFace);
+    slide.querySelectorAll('.sd-qcard,.sd-float').forEach(c => {
+      c.style.setProperty('--fd', rand(7, 12).toFixed(1) + 's'); c.style.setProperty('--fdl', (-rand(0, 8)).toFixed(1) + 's');
+      c.style.setProperty('--fx', rand(-12, 12).toFixed(0) + 'px'); c.style.setProperty('--fy', rand(-24, -8).toFixed(0) + 'px');
+    });
+    slide.querySelectorAll('[data-anim="dots"]').forEach(setupDotText);
+    slide.querySelectorAll('[data-anim="mask"],[data-anim="typein"]').forEach(splitLines);
+    if ((slide.dataset.bg || '').includes('white')) slide.classList.add('on-white');
+    slide._steppers = [];
+    slide.querySelectorAll('.sd-cloud').forEach(c => slide._steppers.push(setupCloud(c)));
+    slide.querySelectorAll('.sd-carousel').forEach(c => slide._steppers.push(setupCarousel(c)));
+    slide.querySelectorAll('.sd-cam[data-cam]').forEach(c => slide._steppers.push(setupCam(c)));
+    slide.querySelectorAll('.sd-swap').forEach(c => c.setAttribute('data-focus-group', ''));
+    slide.querySelectorAll('.sd-chart').forEach(c => { try { buildChart(c); } catch (e) { console.warn('[StageDeck] chart', e); } });
+    slide._tick = [];
+    slide.querySelectorAll('canvas.sd-spiral').forEach(c => slide._tick.push(Spiral(c)));
+    slide.querySelectorAll('.sd-flythrough').forEach(b => slide._tick.push(Flythrough(b, slide)));
+    const nums = [];
+    slide.querySelectorAll('[data-step]').forEach(e => nums.push(+e.dataset.step));
+    slide.querySelectorAll('[data-focus]').forEach(e => e.dataset.focus.split(/[\s,]+/).forEach(n => nums.push(+n)));
+    slide.querySelectorAll('[data-done]').forEach(e => nums.push(+e.dataset.done));
+    [slide, ...slide.querySelectorAll('[data-step-class]')].forEach(e => { if (e.dataset.stepClass) e.dataset.stepClass.split(/\s+/).forEach(p => nums.push(+p.split(':')[0])); });
+    slide.querySelectorAll('[data-until]').forEach(e => nums.push(+e.dataset.until));
+    slide.querySelectorAll('[data-scroll-step]').forEach(e => nums.push(+e.dataset.scrollStep));
+    slide._steppers.forEach(s => nums.push(s.max));
+    slide._max = Math.max(0, ...nums.filter(n => !isNaN(n)));
+  });
+
+  const ownStep = (el, slide) => { const s = el.closest('[data-step]'); return s && slide.contains(s) ? s : null; };
+  function delayOf(el) {
+    let d = +(el.dataset.delay || 0);
+    const p = el.parentElement;
+    if (p && p.dataset.stagger) {
+      const sibs = [...p.children].filter(c => c.dataset.anim);
+      let idx = sibs.indexOf(el);
+      if (p.dataset.staggerOrder === 'random') { if (!p._order || p._order.length !== sibs.length) { p._order = sibs.map((_, i) => i).sort(() => Math.random() - .5); } idx = p._order[idx]; }
+      d += idx * +p.dataset.stagger + (p.dataset.anim ? 0 : +(p.dataset.delay || 0));
+    }
+    return d;
+  }
+  function runAnim(el, extraDelay, instant) {
+    if (el._keepInstant) { instant = true; el._keepInstant = false; }
+    const name = el.dataset.anim || 'rise';
+    el.classList.add('is-in');
+    cancelAnims(el);
+    (FX[name] || FX.rise)(el, { delay: delayOf(el) + (extraDelay || 0), instant });
+  }
+  function revealGroup(rootEl, slide, extraDelay, instant) {
+    // animate rootEl (a [data-step] or the slide) and every [data-anim] whose nearest step owner is rootEl
+    const isSlide = rootEl === slide;
+    if (!isSlide) {
+      if (rootEl.dataset.anim) runAnim(rootEl, extraDelay, instant);
+      else { rootEl.classList.add('is-in'); const hasKids = rootEl.querySelector('[data-anim]'); if (!hasKids) runAnim(rootEl, extraDelay, instant); }
+    }
+    rootEl.querySelectorAll('[data-anim]').forEach(el => {
+      if (el === rootEl) return;
+      if (ownStep(el, slide) !== (isSlide ? null : rootEl)) return;
+      runAnim(el, extraDelay, instant);
+    });
+  }
+  function hideStepEl(el, instant) {
+    cancelAnims(el);
+    if (instant) { el.classList.remove('is-in'); return; }
+    const a = el.animate([{ opacity: 1, filter: 'blur(0px)' }, { opacity: 0, filter: 'blur(10px)' }], { duration: 220, easing: 'ease-out', fill: 'both' });
+    a.finished.then(() => { el.classList.remove('is-in'); a.cancel(); }).catch(() => {});
+  }
+
+  function flipCapture(slide) {
+    const m = new Map();
+    slide.querySelectorAll('[data-flip]').forEach(el => { const r = el.getBoundingClientRect(); if (r.width || r.height) m.set(el, r); });
+    return m;
+  }
+  function flipPlay(m) {
+    m.forEach((r0, el) => {
+      cancelAnims(el);
+      const r1 = el.getBoundingClientRect(), dx = (r0.left - r1.left) / stageScale, dy = (r0.top - r1.top) / stageScale;
+      if (Math.abs(dx) + Math.abs(dy) < 1) return;
+      const s = sp(el.dataset.spring || 'chewy');
+      play(el, t => { const k = 1 - s.f(t); return { transform: `translate3d(${(dx * k).toFixed(2)}px,${(dy * k).toFixed(2)}px,0)` }; }, s.T, {});
+    });
+  }
+  function applyStep(slide, step, dir, instant) {
+    const flips = instant ? null : flipCapture(slide);
+    slide.querySelectorAll('[data-until]').forEach(el => el.classList.toggle('is-gone', step >= +el.dataset.until));
+    slide.querySelectorAll('[data-step]').forEach(el => {
+      const n = +el.dataset.step, isIn = el.classList.contains('is-in');
+      if (n <= step && !isIn) revealGroup(el, slide, 0, instant);
+      else if (n > step && isIn) {
+        hideStepEl(el, instant || el.hasAttribute('data-collapse'));
+        el.querySelectorAll('[data-anim]').forEach(c => { if (ownStep(c, slide) === el) { cancelAnims(c); c.classList.remove('is-in'); } });
+      }
+    });
+    slide.querySelectorAll('[data-focus-group]').forEach(g => {
+      let any = false;
+      [...g.querySelectorAll('[data-focus]')].forEach(it => { const on = it.dataset.focus.split(/[\s,]+/).map(Number).includes(step); it.classList.toggle('is-focus', on); any = any || on; });
+      g.classList.toggle('has-focus', any);
+    });
+    slide.querySelectorAll('[data-done]').forEach(el => el.classList.toggle('is-done', step >= +el.dataset.done));
+    slide.querySelectorAll('[data-scroll-step]').forEach(el => { const on = step >= +el.dataset.scrollStep; if (on && !el._scrolled) { el._scrolled = true; FX.scroll(el, { instant }); } else if (!on && el._scrolled) { el._scrolled = false; cancelAnims(el); } });
+    [slide, ...slide.querySelectorAll('[data-step-class]')].forEach(el => { if (el.dataset.stepClass) el.dataset.stepClass.split(/\s+/).forEach(p => { const [n, cls] = p.split(':'); el.classList.toggle(cls, step >= +n); }); });
+    slide._steppers.forEach(s => s.step(step, dir, instant));
+    if (flips) flipPlay(flips);
+  }
+
+  function resetSlide(slide) {
+    slide.querySelectorAll('[data-anim],[data-step],.sd-mask__in,.sd-word,.sd-char,.sd-bokeh,.sd-bokeh i,svg *').forEach(el => { cancelAnims(el); el.classList.remove('is-in'); });
+    slide.querySelectorAll('[data-scroll-step]').forEach(el => { cancelAnims(el); el._scrolled = false; });
+    slide.querySelectorAll('[data-keep]').forEach(k => { if (k._keepHidden) { k.style.visibility = ''; k._keepHidden = false; } });
+    slide.querySelectorAll('[data-anim]').forEach(el => { if (['mask', 'words', 'dots', 'type', 'draw', 'chart', 'assemble'].includes(el.dataset.anim)) el.style.opacity = ''; });
+    slide.querySelectorAll('.is-done,.is-focus,.has-focus,.is-gone').forEach(el => el.classList.remove('is-done', 'is-focus', 'has-focus', 'is-gone'));
+    slide._steppers.forEach(s => s.reset());
+    if (slide._stopBlink) slide._stopBlink();
+    if (slide._tickFns) slide._tickFns.forEach(f => tickers.delete(f));
+  }
+
+  let cur = -1, curStep = 0;
+  function setBg(slide) {
+    stage.className = 'sd-stage ' + (slide.dataset.bg || '').split(/\s+/).filter(Boolean).map(b => 'bg-' + b).join(' ');
+  }
+  function enter(slide, step, dir) {
+    if (slide._leaveAnim) { slide._leaveAnim.cancel(); slide._leaveAnim = null; slide.classList.remove('is-leaving'); }
+    resetSlide(slide);
+    slide.classList.add('is-active');
+    setBg(slide);
+    const inst = dir < 0;
+    const base = dir === 0 ? 0 : +(slide.dataset.enterDelay || 160);
+    revealGroup(slide, slide, base, inst);
+    slide.querySelectorAll('[data-autotick]').forEach(ul => { const iv = +ul.dataset.autotick || 600; [...ul.children].forEach((li, i) => later(ul, base + 700 + i * iv, () => li.classList.add('is-done'))); });
+    slide._steppers.forEach(s => s.enter(step, inst));
+    if (step > 0) applyStep(slide, step, 1, true);
+    else applyStep(slide, 0, 1, inst);
+    slide._stopBlink = blinkLoop(slide);
+    slide._enteredAt = performance.now() + (dir === 0 ? 0 : +(slide.dataset.enterDelay || 160));
+    slide._tickFns = slide._tick.slice(); slide._tickFns.forEach(f => tickers.add(f));
+  }
+  function leave(slide, dir) {
+    slide.classList.remove('is-active'); slide.classList.add('is-leaving');
+    const type = dir < 0 && slide.dataset.transition === 'dive' ? 'fade' : (slide.dataset.transition || 'fade');
+    const to = type === 'push' ? `translate3d(0,${dir >= 0 ? -110 : 110}px,0)` : type === 'zoom' ? 'scale(1.07)' : 'scale(.985)';
+    if (type === 'cut' || REDUCE) { slide.classList.remove('is-leaving'); resetSlide(slide); return; }
+    let a, hold = 0;
+    if (dir >= 0) slide.querySelectorAll('[data-exit="smear"]').forEach(el => { hold = Math.max(hold, smearOut(el) * .7); });
+    if (type === 'dip') {
+      const dip = stage.querySelector('.sd-dip');
+      dip.animate([{ offset: 0, opacity: 0, easing: 'cubic-bezier(.45,0,.55,1)' }, { offset: .39, opacity: 1 }, { offset: .74, opacity: 1, easing: 'cubic-bezier(.22,1,.36,1)' }, { offset: 1, opacity: 0 }], { duration: 1530 });
+      a = slide.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, easing: 'cubic-bezier(.45,0,.55,1)', fill: 'forwards', delay: hold });
+    } else if (type === 'dive') {
+      slide.style.transformOrigin = slide.dataset.origin || '50% 50%';
+      a = slide.animate([
+        { offset: 0, opacity: 1, filter: 'blur(0px)', transform: 'scale(1)' },
+        { offset: .55, opacity: 1, filter: 'blur(0px)', transform: 'scale(2.2)' },
+        { offset: 1, opacity: 0, filter: 'blur(10px)', transform: `scale(${slide.dataset.diveScale || 7})` }], { duration: 760, easing: 'cubic-bezier(.7,0,.84,0)', fill: 'forwards' });
+    } else if (type === 'fade' || type === 'beat') {
+      a = slide.animate([
+        { offset: 0, opacity: 1, filter: 'blur(0px) saturate(1)', transform: 'none' },
+        { offset: .45, opacity: .38, filter: 'blur(1.5px) saturate(.25)', transform: 'scale(.995)' },
+        { offset: 1, opacity: 0, filter: 'blur(10px) saturate(0)', transform: 'scale(.985)' }], { duration: type === 'beat' ? 350 : 320, easing: 'cubic-bezier(.3,0,.3,1)', fill: 'forwards', delay: hold });
+    } else a = slide.animate([{ opacity: 1, filter: 'blur(0px)', transform: 'none' }, { opacity: 0, filter: 'blur(14px)', transform: to }], { duration: type === 'push' ? 420 : 300, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
+    slide._leaveAnim = a;
+    a.finished.then(() => { if (slide._leaveAnim !== a) return; slide._leaveAnim = null; a.cancel(); slide.classList.remove('is-leaving'); if (!slide.classList.contains('is-active')) resetSlide(slide); }).catch(() => {});
+  }
+  function go(i, step = 0, dir) {
+    i = clamp(i, 0, slides.length - 1);
+    if (dir === undefined) dir = i >= cur ? 1 : -1;
+    if (i !== cur) {
+      const from = cur >= 0 ? slides[cur] : null;
+      if (from) leave(from, dir);
+      cur = i; curStep = step === 'end' ? slides[i]._max : step;
+      const nxt = slides[i];
+      if (from && dir !== 0) {
+        const olds = new Map([...from.querySelectorAll('[data-keep]')].map(k => [k.dataset.keep, k]));
+        nxt.querySelectorAll('[data-keep]').forEach(k => { const old = olds.get(k.dataset.keep); if (!old) return; old.style.visibility = 'hidden'; old._keepHidden = true; k._keepInstant = true; k.querySelectorAll('[data-anim]').forEach(c => { c._keepInstant = true; }); });
+      }
+      const seq = { dive: 520, beat: 750, dip: 1130 }[from && dir > 0 ? from.dataset.transition : ''];
+      if (seq && !nxt.dataset.enterDelay) { nxt.dataset.enterDelay = seq; nxt._autoDelay = true; }
+      enter(nxt, curStep, cur === 0 && dir === 0 ? 0 : dir);
+      if (nxt._autoDelay) { delete nxt.dataset.enterDelay; nxt._autoDelay = false; }
+    } else if (step !== curStep) {
+      const d = step > curStep ? 1 : -1; curStep = step; applyStep(slides[i], curStep, d, false);
+    }
+    const url = `#${cur + 1}${curStep ? '.' + curStep : ''}`;
+    if (location.hash !== url) history.replaceState(null, '', url);
+    progress.style.width = ((cur + 1) / slides.length * 100) + '%';
+    counter.textContent = `${cur + 1} / ${slides.length}${slides[cur]._max ? ` · ${curStep}/${slides[cur]._max}` : ''}`;
+  }
+  const next = () => { if (curStep < slides[cur]._max) go(cur, curStep + 1); else if (cur < slides.length - 1) go(cur + 1, 0, 1); };
+  const prev = () => { if (curStep > 0) go(cur, curStep - 1); else if (cur > 0) go(cur - 1, 'end', -1); };
+
+  /* input */
+  document.addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('input,textarea,[contenteditable]')) return;
+    const k = e.key;
+    if (['ArrowRight', 'ArrowDown', ' ', 'PageDown', 'Enter', 'n'].includes(k)) { e.preventDefault(); next(); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace', 'p'].includes(k)) { e.preventDefault(); prev(); }
+    else if (k === 'Home') go(0, 0, -1);
+    else if (k === 'End') go(slides.length - 1, 'end', 1);
+    else if (k === 'f' || k === 'F') { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+    else if (k === 'c' || k === 'C') document.body.classList.toggle('show-chrome');
+    else if (k === 'o' || k === 'O' || k === 'Escape') { if (k === 'Escape' && !document.body.classList.contains('is-overview')) return; document.body.classList.toggle('is-overview'); fit(); }
+    else if (k === 'r' || k === 'R') { const s = slides[cur]; resetSlide(s); s.classList.remove('is-active'); const c = cur; cur = -1; go(c, 0, 1); }
+  });
+  stage.addEventListener('click', e => {
+    if (document.body.classList.contains('is-overview')) { const s = e.target.closest('.slide'); if (s) { document.body.classList.remove('is-overview'); fit(); go(slides.indexOf(s), 0, 1); } return; }
+    if (e.target.closest('a,button,input,video,[data-noclick]')) return;
+    const r = stage.getBoundingClientRect();
+    (e.clientX - r.left) / r.width < .25 ? prev() : next();
+  });
+  let tx = 0, ty = 0;
+  stage.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+  stage.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty; if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) (dx < 0 ? next : prev)(); }, { passive: true });
+  window.addEventListener('hashchange', () => { const [a, b] = location.hash.slice(1).split('.'); const i = (+a || 1) - 1, st = +b || 0; if (i !== cur || st !== curStep) go(i, st); });
+  window.addEventListener('beforeprint', () => slides.forEach(s => s.querySelectorAll('[data-anim="dots"]').forEach(el => dotText(el, { instant: true }))));
+
+  /* living corner bug: <div class="sd-bug" data-text="Event 2026"> — mark -> color dot -> words type on -> hold -> dot deletes -> mark */
+  document.querySelectorAll('.sd-bug').forEach(bug => {
+    stage.appendChild(bug);
+    bug.innerHTML = '<span class="sd-bug__mark"></span><span class="sd-bug__text"></span><span class="sd-bug__dot"></span>';
+    const mark = bug.querySelector('.sd-bug__mark'), txt = bug.querySelector('.sd-bug__text'), dot = bug.querySelector('.sd-bug__dot');
+    const words = (bug.dataset.text || '').split(' '), cols = ['var(--sd-violet)', 'var(--sd-green)', 'var(--sd-blue)', 'var(--sd-orange)', 'var(--sd-white)'];
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    let ci = 0; const cyc = setInterval(() => { dot.style.background = cols[ci++ % cols.length]; }, 130);
+    (async function run() {
+      if (REDUCE) { txt.textContent = bug.dataset.text || ''; return; }
+      for (;;) {
+        bug.className = 'sd-bug is-mark'; txt.textContent = '';
+        await wait(+(bug.dataset.markHold || 9000));
+        bug.className = 'sd-bug is-morph'; await wait(300);
+        bug.className = 'sd-bug is-dot'; await wait(900);
+        for (let i = 1; i <= words.length; i++) { txt.textContent = words.slice(0, i).join(' '); await wait(130); }
+        await wait(+(bug.dataset.hold || 12000));
+        const full = txt.textContent;
+        for (let n = full.length; n >= 0; n--) { txt.textContent = full.slice(0, n); await wait(36); }
+        bug.className = 'sd-bug is-unmorph'; await wait(280);
+      }
+    })();
+  });
+
+  /* start */
+  const startDeck = () => { const [a, b] = location.hash.slice(1).split('.'); go(((+a || 1) - 1), +b || 0, 0); };
+  const fontsReady = document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]) : Promise.resolve();
+  fontsReady.then(startDeck);
+
+  window.StageDeck = { go: (n, s) => go(n - 1, s || 0), next, prev, spring, SPRINGS, linearEasing, play, FX, ease, slides };
+})();
+
+</script>
+</body>
+</html>
